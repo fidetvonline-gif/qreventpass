@@ -12,7 +12,10 @@ import {
   Building,
   UserCheck,
   ChevronDown,
-  Database
+  Database,
+  User,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 import { UserRole, EventItem } from '../types';
 import { storage } from '../services/storage';
@@ -27,6 +30,9 @@ interface NavbarProps {
   activeEvent: EventItem | undefined;
   onSelectEvent: (eventId: string) => void;
   onOpenSupabaseModal: () => void;
+  currentUser: { name: string; email: string; role: UserRole } | null;
+  onOpenLoginModal: () => void;
+  onLogout: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -38,6 +44,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeEvent,
   onSelectEvent,
   onOpenSupabaseModal,
+  currentUser,
+  onOpenLoginModal,
+  onLogout,
 }) => {
   const isCloudConnected = isSupabaseConfigured();
   const handleResetData = () => {
@@ -87,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span className="font-semibold text-white tracking-wide">EventPass</span>
           <span className="text-slate-500">•</span>
           <span className="text-slate-400 text-[11px] truncate">
-            Godswill Akpabio Event Centre (Uyo, Akwa Ibom)
+            Godswill Akpabio Event Centre (Ukana, Akwa Ibom)
           </span>
         </div>
 
@@ -127,6 +136,35 @@ export const Navbar: React.FC<NavbarProps> = ({
               <option value="scanner_staff">Entrance Gate Staff</option>
               <option value="guest">Guest Attendee</option>
             </select>
+          </div>
+
+          {/* User Auth Info / Login button */}
+          <div className="flex items-center gap-2 border-l border-slate-700 pl-3">
+            {currentUser ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 text-slate-200">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px] border border-emerald-500/30">
+                    {currentUser.name.charAt(0)}
+                  </div>
+                  <span className="text-[11px] font-medium hidden md:inline truncate max-w-[100px]">{currentUser.name}</span>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onOpenLoginModal}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition-colors"
+              >
+                <LogIn className="w-3 h-3" />
+                <span>Sign In</span>
+              </button>
+            )}
           </div>
 
           <button

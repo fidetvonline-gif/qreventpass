@@ -11,17 +11,47 @@ import { AuditLogsView } from './components/AuditLogsView';
 import { EventsManagement } from './components/EventsManagement';
 import { PublicRegistration } from './components/PublicRegistration';
 import { SupabaseModal } from './components/SupabaseModal';
+import { LoginModal } from './components/LoginModal';
 import { storage } from './services/storage';
 import { isSupabaseConfigured } from './lib/supabase';
 import { UserRole, EventItem } from './types';
 import { ShieldCheck, Building, CheckCircle2, Database } from 'lucide-react';
 
 export default function App() {
-  const [currentRole, setCurrentRole] = useState<UserRole>('organizer');
-  const [currentView, setCurrentView] = useState<string>('dashboard');
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role: UserRole } | null>(() => {
+    try {
+      const saved = localStorage.getItem('eventpass_current_user');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+  const [currentRole, setCurrentRole] = useState<UserRole>(() => {
+    try {
+      const saved = localStorage.getItem('eventpass_current_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.role || 'organizer';
+      }
+    } catch {}
+    return 'organizer';
+  });
+  const [currentView, setCurrentView] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('eventpass_current_user');
+      if (saved) return 'dashboard';
+    } catch {}
+    return 'landing';
+  });
   const [events, setEvents] = useState<EventItem[]>([]);
   const [activeEventId, setActiveEventId] = useState<string>('');
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('eventpass_current_user');
+      return !saved; // Open login modal automatically on first visit if not logged in
+    } catch {}
+    return true;
+  });
 
   const loadData = () => {
     const allEvents = storage.getEvents();
@@ -44,6 +74,25 @@ export default function App() {
     storage.setActiveEventId(id);
   };
 
+  const handleLoginSuccess = (user: { name: string; email: string; role: UserRole }) => {
+    setCurrentUser(user);
+    setCurrentRole(user.role);
+    try {
+      localStorage.setItem('eventpass_current_user', JSON.stringify(user));
+    } catch {}
+    if (user.role === 'scanner_staff') setCurrentView('scanner');
+    else if (user.role === 'guest') setCurrentView('public_register');
+    else setCurrentView('dashboard');
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem('eventpass_current_user');
+    } catch {}
+    setIsLoginModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-100/70 text-slate-900 flex flex-col font-sans selection:bg-slate-900 selection:text-white antialiased">
       {/* Top Navigation */}
@@ -56,10 +105,31 @@ export default function App() {
         activeEvent={activeEvent}
         onSelectEvent={handleSelectEvent}
         onOpenSupabaseModal={() => setIsSupabaseModalOpen(true)}
+        currentUser={currentUser}
+        onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        {!currentUser && (
+          <div className="mb-6 p-4 sm:p-6 bg-slate-900 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
+            <div className="space-y-1 text-center sm:text-left">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30">
+                <span>Godswill Akpabio Event Centre (Ukana, Akwa Ibom)</span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold">Welcome to EventPass Authentication</h2>
+              <p className="text-xs text-slate-300">Please sign in to your account or create a new account to access the system.</p>
+            </div>
+            <button
+              onClick={() => setIsLoginModalOpen(true)}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all shrink-0 cursor-pointer"
+            >
+              Sign In / Create Account
+            </button>
+          </div>
+        )}
+
         {currentView === 'landing' && (
           <LandingPage
             events={events}
@@ -120,6 +190,13 @@ export default function App() {
       <SupabaseModal
         isOpen={isSupabaseModalOpen}
         onClose={() => setIsSupabaseModalOpen(false)}
+      />
+
+      {/* User Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
 
       {/* Footer */}
