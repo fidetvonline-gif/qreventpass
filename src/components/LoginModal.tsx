@@ -45,7 +45,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         throw new Error(result.message || 'Authentication failed.');
       }
 
-      const user = result.user || {
+      const user = ('user' in result ? result.user : undefined) || {
         name: resolvedName || cleanEmail.split('@')[0],
         email: cleanEmail,
         role: resolvedRole

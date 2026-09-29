@@ -86,5 +86,9 @@ export const accountService = {
     const users = this.getUsers().filter(u => u.email.toLowerCase() !== email.trim().toLowerCase());
     localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
     window.dispatchEvent(new CustomEvent('eventpass:users_updated'));
+  },
+
+  getUserByEmail(email: string): UserAccount | undefined {
+    return this.getUsers().find(u => u.email.toLowerCase() === email.trim().toLowerCase());
   }
 };

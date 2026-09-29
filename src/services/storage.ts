@@ -178,29 +178,26 @@ class StorageService {
   }
 
   // Events CRUD
-  async getEvents(): Promise<EventItem[]> {
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabase();
-      if (supabase) {
-        const { data, error } = await supabase.from('events').select('*').order('created_at', { ascending: false });
-        if (!error && data) {
-          localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(data));
-          return data;
-        }
-      }
-    }
-    
+  getEvents(): EventItem[] {
     const saved = localStorage.getItem(STORAGE_KEYS.EVENTS);
-    if (!saved) return INITIAL_EVENTS;
+    if (!saved) {
+      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(INITIAL_EVENTS));
+      return INITIAL_EVENTS;
+    }
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : INITIAL_EVENTS;
     } catch {
       return INITIAL_EVENTS;
     }
   }
 
-  async saveEvent(event: EventItem): Promise<void> {
-    const events = await this.getEvents();
+  getEvent(id: string): EventItem | undefined {
+    return this.getEvents().find(e => e.id === id);
+  }
+
+  saveEvent(event: EventItem): void {
+    const events = this.getEvents();
     const idx = events.findIndex(e => e.id === event.id);
     const updatedEvent = {
       ...event,
@@ -217,7 +214,9 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
     
     if (isSupabaseConfigured()) {
-      await getSupabase()?.from('events').upsert(updatedEvent);
+      getSupabase()?.from('events').upsert(updatedEvent).then(({ error }) => {
+        if (error) console.warn('Supabase event sync error:', error.message);
+      });
     }
 
     this.logAudit(
@@ -231,201 +230,159 @@ class StorageService {
   }
 
   // Guests CRUD
-  async getGuests(eventId?: string): Promise<Guest[]> {
+  getGuests(eventId?: string): Guest[] {
     const targetEventId = eventId || this.getActiveEventId();
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabase();
-      if (supabase) {
-        const { data, error } = await supabase.from('guests').select('*').eq('event_id', targetEventId);
-        if (!error && data) {
-          const allLocal = this.getAllGuests();
-          const others = allLocal.filter(g => g.event_id !== targetEventId);
-          localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify([...others, ...data]));
-          return data;
-        }
-      }
-    }
-    const saved = localStorage.getItem(STORAGE_KEYS.GUESTS);
-    let guests: Guest[] = INITIAL_GUESTS;
-    if (saved) {
-      try { guests = JSON.parse(saved); } catch { guests = INITIAL_GUESTS; }
-    }
-    return guests.filter(g => g.event_id === targetEventId);
+    const allGuests = this.getAllGuests();
+    return allGuests.filter(g => g.event_id === targetEventId);
   }
 
-  async saveGuest(guest: Guest): Promise<void> {
+  getAllGuests(): Guest[] {
+    const saved = localStorage.getItem(STORAGE_KEYS.GUESTS);
+    if (!saved) return INITIAL_GUESTS;
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : INITIAL_GUESTS;
+    } catch {
+      return INITIAL_GUESTS;
+    }
+  }
+
+  saveGuest(guest: Guest): void {
+    const updatedGuest = {
+      ...guest,
+      updated_at: new Date().toISOString(),
+      created_at: guest.created_at || new Date().toISOString()
+    };
+
     const all = this.getAllGuests();
     const idx = all.findIndex(g => g.id === guest.id);
-    if (idx >= 0) all[idx] = guest;
-    else all.push(guest);
+    if (idx >= 0) {
+      all[idx] = updatedGuest;
+    } else {
+      all.push(updatedGuest);
+    }
+    
+    localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(all));
+
+    if (isSupabaseConfigured()) {
+      getSupabase()?.from('guests').upsert(updatedGuest).then(({ error }) => {
+        if (error) console.warn('Supabase guest sync error:', error.message);
+      });
+    }
+    
+    this.notifyListeners();
+  }
+
+  findGuestByTokenOrRef(tokenInput: string, allGuests: Guest[]): Guest | undefined {
+    const clean = tokenInput.trim().toUpperCase();
+    return allGuests.find(g => 
+      (g.qr_token && g.qr_token.toUpperCase() === clean) || 
+      (g.reference_number && g.reference_number.toUpperCase() === clean) ||
+      g.id === tokenInput
+    );
+  }
+
+  toggleGuestActive(guestId: string): void {
+    const all = this.getAllGuests();
+    const guest = all.find(g => g.id === guestId);
+    if (guest) {
+      guest.is_active = !guest.is_active;
+      guest.updated_at = new Date().toISOString();
+      this.saveGuest(guest);
+    }
+  }
+
+  regenerateGuestToken(guestId: string): void {
+    const all = this.getAllGuests();
+    const guest = all.find(g => g.id === guestId);
+    if (guest) {
+      guest.qr_token = generateToken();
+      guest.reference_number = generateReferenceNumber();
+      guest.updated_at = new Date().toISOString();
+      this.saveGuest(guest);
+    }
+  }
+
+  deleteGuest(guestId: string): void {
+    const all = this.getAllGuests().filter(g => g.id !== guestId);
     localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(all));
     if (isSupabaseConfigured()) {
-      await getSupabase()?.from('guests').upsert(guest);
+      getSupabase()?.from('guests').delete().eq('id', guestId).then(({ error }) => {
+        if (error) console.warn('Supabase guest delete error:', error.message);
+      });
     }
     this.notifyListeners();
   }
 
   // Gates CRUD
-  async getGates(eventId?: string): Promise<Gate[]> {
+  getGates(eventId?: string): Gate[] {
     const targetEventId = eventId || this.getActiveEventId();
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabase();
-      if (supabase) {
-        const { data, error } = await supabase.from('gates').select('*').eq('event_id', targetEventId);
-        if (!error && data) {
-          const allLocal = this.getAllGates();
-          const otherGates = allLocal.filter(g => g.event_id !== targetEventId);
-          localStorage.setItem(STORAGE_KEYS.GATES, JSON.stringify([...otherGates, ...data]));
-          return data;
-        }
-      }
-    }
-    const saved = localStorage.getItem(STORAGE_KEYS.GATES);
-    let gates: Gate[] = INITIAL_GATES;
-    if (saved) {
-      try { gates = JSON.parse(saved); } catch { gates = INITIAL_GATES; }
-    }
-    return gates.filter(g => g.event_id === targetEventId);
+    const allGates = this.getAllGates();
+    return allGates.filter(g => g.event_id === targetEventId);
   }
 
-  async saveGate(gate: Gate): Promise<void> {
+  saveGate(gate: Gate): void {
     const all = this.getAllGates();
     const idx = all.findIndex(g => g.id === gate.id);
     if (idx >= 0) all[idx] = gate;
     else all.push(gate);
     localStorage.setItem(STORAGE_KEYS.GATES, JSON.stringify(all));
     if (isSupabaseConfigured()) {
-      await getSupabase()?.from('gates').upsert(gate);
+      getSupabase()?.from('gates').upsert(gate).then(({ error }) => {
+        if (error) console.warn('Supabase gate sync error:', error.message);
+      });
     }
     this.notifyListeners();
   }
 
-  private getAllGates(): Gate[] {
+  getAllGates(): Gate[] {
     const saved = localStorage.getItem(STORAGE_KEYS.GATES);
     if (!saved) return INITIAL_GATES;
-    try { return JSON.parse(saved); } catch { return INITIAL_GATES; }
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : INITIAL_GATES;
+    } catch {
+      return INITIAL_GATES;
+    }
   }
 
   // Staff CRUD
-  async getStaff(eventId?: string): Promise<EventStaff[]> {
+  getStaff(eventId?: string): EventStaff[] {
     const targetEventId = eventId || this.getActiveEventId();
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabase();
-      if (supabase) {
-        const { data, error } = await supabase.from('event_staff').select('*').eq('event_id', targetEventId);
-        if (!error && data) {
-          const allLocal = this.getAllStaff();
-          const otherStaff = allLocal.filter(s => s.event_id !== targetEventId);
-          localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify([...otherStaff, ...data]));
-          return data;
-        }
-      }
-    }
-    const saved = localStorage.getItem(STORAGE_KEYS.STAFF);
-    let staffList: EventStaff[] = INITIAL_STAFF;
-    if (saved) {
-      try { staffList = JSON.parse(saved); } catch { staffList = INITIAL_STAFF; }
-    }
-    return staffList.filter(s => s.event_id === targetEventId);
+    const allStaff = this.getAllStaff();
+    return allStaff.filter(s => s.event_id === targetEventId);
   }
 
-  async saveStaff(staffMember: EventStaff): Promise<void> {
+  saveStaff(staffMember: EventStaff): void {
     const all = this.getAllStaff();
     const idx = all.findIndex(s => s.id === staffMember.id);
     if (idx >= 0) all[idx] = staffMember;
     else all.push(staffMember);
     localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(all));
     if (isSupabaseConfigured()) {
-      await getSupabase()?.from('event_staff').upsert(staffMember);
+      getSupabase()?.from('event_staff').upsert(staffMember).then(({ error }) => {
+        if (error) console.warn('Supabase staff sync error:', error.message);
+      });
     }
     this.notifyListeners();
   }
 
-  private getAllStaff(): EventStaff[] {
+  getAllStaff(): EventStaff[] {
     const saved = localStorage.getItem(STORAGE_KEYS.STAFF);
     if (!saved) return INITIAL_STAFF;
-    try { return JSON.parse(saved); } catch { return INITIAL_STAFF; }
-  }
-
-  private getAllGuests(): Guest[] {
-    const saved = localStorage.getItem(STORAGE_KEYS.GUESTS);
-    if (!saved) return INITIAL_GUESTS;
-    try { return JSON.parse(saved); } catch { return INITIAL_GUESTS; }
-  }
-
-  findGuestByTokenOrRef(rawToken: string, allGuests: Guest[]): Guest | undefined {
-    if (!rawToken || !rawToken.trim()) return undefined;
-    let trimmed = rawToken.trim().toUpperCase();
-    return allGuests.find(g => 
-      (g.qr_token && g.qr_token.toUpperCase() === trimmed) || 
-      (g.reference_number && g.reference_number.toUpperCase() === trimmed) ||
-      (g.id && g.id.toUpperCase() === trimmed)
-    );
-  }
-
-  async deleteGuest(guestId: string): Promise<void> {
-    const all = this.getAllGuests().filter(g => g.id !== guestId);
-    localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(all));
-    if (isSupabaseConfigured()) {
-      await getSupabase()?.from('guests').delete().eq('id', guestId);
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : INITIAL_STAFF;
+    } catch {
+      return INITIAL_STAFF;
     }
-    this.notifyListeners();
-  }
-
-  async toggleGuestActive(guestId: string): Promise<void> {
-    const all = this.getAllGuests();
-    const guest = all.find(g => g.id === guestId);
-    if (guest) {
-      guest.is_active = !guest.is_active;
-      guest.updated_at = new Date().toISOString();
-      localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(all));
-      if (isSupabaseConfigured()) {
-        await getSupabase()?.from('guests').update({ is_active: guest.is_active, updated_at: guest.updated_at }).eq('id', guestId);
-      }
-      this.notifyListeners();
-    }
-  }
-
-  async regenerateGuestToken(guestId: string): Promise<string | null> {
-    const all = this.getAllGuests();
-    const guest = all.find(g => g.id === guestId);
-    if (guest) {
-      const newToken = generateToken();
-      guest.qr_token = newToken;
-      guest.updated_at = new Date().toISOString();
-      localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(all));
-      if (isSupabaseConfigured()) {
-        await getSupabase()?.from('guests').update({ qr_token: guest.qr_token, updated_at: guest.updated_at }).eq('id', guestId);
-      }
-      this.notifyListeners();
-      return newToken;
-    }
-    return null;
   }
 
   // Attendance Logs
-  async getAttendanceLogs(eventId?: string): Promise<AttendanceLog[]> {
+  getAttendanceLogs(eventId?: string): AttendanceLog[] {
     const targetEventId = eventId || this.getActiveEventId();
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabase();
-      if (supabase) {
-        const { data, error } = await supabase
-          .from('attendance_logs')
-          .select('*')
-          .eq('event_id', targetEventId)
-          .order('scan_time', { ascending: false })
-          .limit(500);
-        if (!error && data) {
-          return data;
-        }
-      }
-    }
-    const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
-    let logs: AttendanceLog[] = INITIAL_ATTENDANCE;
-    if (saved) {
-      try { logs = JSON.parse(saved); } catch { logs = INITIAL_ATTENDANCE; }
-    }
-    return logs
+    const allLogs = this.getAllAttendanceLogs();
+    return allLogs
       .filter(l => l.event_id === targetEventId)
       .sort((a, b) => new Date(b.scan_time).getTime() - new Date(a.scan_time).getTime());
   }
@@ -433,7 +390,21 @@ class StorageService {
   getAllAttendanceLogs(): AttendanceLog[] {
     const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
     if (!saved) return INITIAL_ATTENDANCE;
-    try { return JSON.parse(saved); } catch { return INITIAL_ATTENDANCE; }
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : INITIAL_ATTENDANCE;
+    } catch {
+      return INITIAL_ATTENDANCE;
+    }
+  }
+
+  verifyAndCheckIn(
+    tokenInput: string,
+    gateId: string,
+    scannerUserName: string,
+    deviceInfo = 'Scanner Device'
+  ): VerificationResult {
+    return this.verifyAndCheckInSync(tokenInput, gateId, scannerUserName, deviceInfo);
   }
 
   private verifyAndCheckInSync(
@@ -444,119 +415,132 @@ class StorageService {
   ): VerificationResult {
     const cleanToken = tokenInput.trim().toUpperCase();
     const activeEventId = this.getActiveEventId();
+    const gates = this.getGates(activeEventId);
+    const selectedGate = gates.find(g => g.id === gateId) || gates[0] || {
+      id: 'gate-default',
+      name: 'Main Gate',
+    };
     const nowIso = new Date().toISOString();
+
     const allGuests = this.getAllGuests();
     const guest = this.findGuestByTokenOrRef(tokenInput, allGuests);
 
     if (!guest) {
-      return { status: 'invalid', message: 'Invalid QR Code.', gate_name: 'Main Gate', scan_time: nowIso };
+      const logEntry: AttendanceLog = {
+        id: `att-${Date.now()}`,
+        event_id: activeEventId,
+        qr_token: cleanToken,
+        gate_id: selectedGate.id,
+        gate_name: selectedGate.name,
+        scanner_user_id: 'scanner-current',
+        scanner_user_name: scannerUserName,
+        scan_time: nowIso,
+        status: 'invalid',
+        notes: 'Token not found in database',
+        device_info: deviceInfo,
+      };
+      this.recordAttendanceLog(logEntry);
+      return {
+        status: 'invalid',
+        message: 'Invalid QR Code. This pass/token is not recognized in the system database.',
+        gate_name: selectedGate.name,
+        scan_time: nowIso,
+      };
     }
+
     if (!guest.is_active) {
-      return { status: 'cancelled', message: 'Pass is deactivated.', guest, gate_name: 'Main Gate', scan_time: nowIso };
+      const logEntry: AttendanceLog = {
+        id: `att-${Date.now()}`,
+        event_id: activeEventId,
+        guest_id: guest.id,
+        guest_name: guest.full_name,
+        guest_category: guest.category,
+        guest_organization: guest.organization,
+        qr_token: cleanToken,
+        gate_id: selectedGate.id,
+        gate_name: selectedGate.name,
+        scanner_user_id: 'scanner-current',
+        scanner_user_name: scannerUserName,
+        scan_time: nowIso,
+        status: 'cancelled',
+        notes: 'Guest credential disabled/cancelled',
+        device_info: deviceInfo,
+      };
+      this.recordAttendanceLog(logEntry);
+      return {
+        status: 'cancelled',
+        message: 'Access Denied. This guest invitation has been deactivated or cancelled.',
+        guest: guest,
+        gate_name: selectedGate.name,
+        scan_time: nowIso,
+      };
     }
+
     if (guest.check_in_status === 'checked_in') {
-      return { status: 'duplicate', message: 'Already checked in.', guest, first_check_in_time: guest.first_check_in_time, first_check_in_gate: guest.first_check_in_gate, gate_name: 'Main Gate', scan_time: nowIso };
+      const logEntry: AttendanceLog = {
+        id: `att-${Date.now()}`,
+        event_id: activeEventId,
+        guest_id: guest.id,
+        guest_name: guest.full_name,
+        guest_category: guest.category,
+        guest_organization: guest.organization,
+        qr_token: cleanToken,
+        gate_id: selectedGate.id,
+        gate_name: selectedGate.name,
+        scanner_user_id: 'scanner-current',
+        scanner_user_name: scannerUserName,
+        scan_time: nowIso,
+        status: 'duplicate',
+        notes: `Duplicate scan attempt! First scan was at ${guest.first_check_in_time ? new Date(guest.first_check_in_time).toLocaleTimeString() : 'earlier'} at ${guest.first_check_in_gate || 'another gate'}`,
+        device_info: deviceInfo,
+      };
+      this.recordAttendanceLog(logEntry);
+
+      guest.check_in_count = (guest.check_in_count || 1) + 1;
+      this.saveGuest(guest);
+
+      return {
+        status: 'duplicate',
+        message: 'Already Checked In. This QR code has already been processed at an entrance.',
+        guest: guest,
+        first_check_in_time: guest.first_check_in_time,
+        first_check_in_gate: guest.first_check_in_gate,
+        gate_name: selectedGate.name,
+        scan_time: nowIso,
+      };
     }
 
     guest.check_in_status = 'checked_in';
     guest.first_check_in_time = nowIso;
-    guest.first_check_in_gate = gateId;
-    this.saveGuestSync(guest);
+    guest.first_check_in_gate = selectedGate.name;
+    guest.check_in_count = 1;
+    this.saveGuest(guest);
 
-    const log: AttendanceLog = {
+    const logEntry: AttendanceLog = {
       id: `att-${Date.now()}`,
       event_id: activeEventId,
       guest_id: guest.id,
       guest_name: guest.full_name,
+      guest_category: guest.category,
+      guest_organization: guest.organization,
       qr_token: cleanToken,
-      gate_id: gateId,
-      gate_name: 'Main Gate',
+      gate_id: selectedGate.id,
+      gate_name: selectedGate.name,
+      scanner_user_id: 'scanner-current',
       scanner_user_name: scannerUserName,
       scan_time: nowIso,
-      status: 'valid'
+      status: 'valid',
+      device_info: deviceInfo,
     };
-    this.recordAttendanceLog(log);
-    return { status: 'valid', message: 'Welcome!', guest, gate_name: 'Main Gate', scan_time: nowIso };
-  }
+    this.recordAttendanceLog(logEntry);
 
-  private saveGuestSync(guest: Guest): void {
-    const all = this.getAllGuests();
-    const idx = all.findIndex(g => g.id === guest.id);
-    if (idx >= 0) all[idx] = guest;
-    else all.push(guest);
-    localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(all));
-    if (isSupabaseConfigured()) {
-      getSupabase()?.from('guests').upsert(guest).then();
-    }
-    this.notifyListeners();
-  }
-
-  async verifyAndCheckIn(
-    tokenInput: string,
-    gateId: string,
-    scannerUserName: string,
-    deviceInfo = 'Scanner Device'
-  ): Promise<VerificationResult> {
-    const cleanToken = tokenInput.trim().toUpperCase();
-    const activeEventId = this.getActiveEventId();
-    
-    // In Supabase mode, we fetch fresh data to prevent race conditions
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabase();
-      if (supabase) {
-        // Find guest by token
-        const { data: guests, error } = await supabase
-          .from('guests')
-          .select('*')
-          .or(`qr_token.eq.${cleanToken},reference_number.eq.${cleanToken}`)
-          .eq('event_id', activeEventId)
-          .limit(1);
-
-        if (!error && guests && guests.length > 0) {
-          const guest = guests[0] as Guest;
-          
-          if (!guest.is_active) {
-            return { status: 'cancelled', message: 'Pass is deactivated.', guest, scan_time: new Date().toISOString() };
-          }
-          
-          if (guest.check_in_status === 'checked_in') {
-            return { status: 'duplicate', message: 'Already checked in.', guest, scan_time: new Date().toISOString() };
-          }
-
-          // Mark as checked in
-          const checkInTime = new Date().toISOString();
-          const { error: updateErr } = await supabase
-            .from('guests')
-            .update({
-              check_in_status: 'checked_in',
-              first_check_in_time: checkInTime,
-              first_check_in_gate: gateId,
-              check_in_count: 1
-            })
-            .eq('id', guest.id);
-
-          if (!updateErr) {
-            const log: AttendanceLog = {
-              id: `att-${Date.now()}`,
-              event_id: activeEventId,
-              guest_id: guest.id,
-              guest_name: guest.full_name,
-              qr_token: cleanToken,
-              gate_id: gateId,
-              gate_name: 'Main Gate', // Should resolve name
-              scanner_user_name: scannerUserName,
-              scan_time: checkInTime,
-              status: 'valid'
-            };
-            await supabase.from('attendance_logs').insert(log);
-            return { status: 'valid', message: 'Welcome!', guest, scan_time: checkInTime };
-          }
-        }
-      }
-    }
-
-    // Fallback to local (same logic as before but wrapped in Promise)
-    return this.verifyAndCheckInSync(tokenInput, gateId, scannerUserName, deviceInfo);
+    return {
+      status: 'valid',
+      message: 'Access Granted. Valid credential confirmed.',
+      guest: guest,
+      gate_name: selectedGate.name,
+      scan_time: nowIso,
+    };
   }
 
   private recordAttendanceLog(log: AttendanceLog): void {

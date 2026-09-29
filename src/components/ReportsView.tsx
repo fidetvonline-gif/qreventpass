@@ -13,7 +13,7 @@ import {
   Building
 } from 'lucide-react';
 import { storage } from '../services/storage';
-import { EventItem, AttendanceLog, Gate } from '../types';
+import { EventItem, AttendanceLog, Gate, Guest } from '../types';
 
 interface ReportsViewProps {
   event: EventItem | undefined;
