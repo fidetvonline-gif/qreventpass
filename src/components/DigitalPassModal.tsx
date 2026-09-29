@@ -86,7 +86,7 @@ export const DigitalPassModal: React.FC<DigitalPassModalProps> = ({ guest, event
           <div className="text-center pb-4 border-b border-slate-100">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold mb-2">
               <Building className="w-3.5 h-3.5 text-slate-500" />
-              <span>Godswill Akpabio Event Centre</span>
+              <span>Godswill Akpabio Event Centre ukana</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900 leading-tight">
               {event.name}

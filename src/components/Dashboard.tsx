@@ -38,16 +38,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [gates, setGates] = useState<Gate[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'valid' | 'duplicate' | 'invalid'>('all');
 
-  const loadData = () => {
+  const loadData = async () => {
     if (!event) return;
-    setGuests(storage.getGuests(event.id));
-    setLogs(storage.getAttendanceLogs(event.id));
-    setGates(storage.getGates(event.id));
+    const [guestsList, attendanceLogs, gatesList] = await Promise.all([
+      storage.getGuests(event.id),
+      storage.getAttendanceLogs(event.id),
+      storage.getGates(event.id)
+    ]);
+    setGuests(guestsList);
+    setLogs(attendanceLogs);
+    setGates(gatesList);
   };
 
   useEffect(() => {
     loadData();
-    const handleUpdate = () => loadData();
+    const handleUpdate = () => { loadData(); };
     window.addEventListener('eventpass:data_updated', handleUpdate);
     return () => window.removeEventListener('eventpass:data_updated', handleUpdate);
   }, [event]);
@@ -123,7 +128,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <Building className="w-3.5 h-3.5 text-slate-400" />
-              <span>Godswill Akpabio Event Centre, Uyo</span>
+              <span>Godswill Akpabio Event Centre ukana</span>
               <span>•</span>
               <span className="text-emerald-700 font-bold">ORGANIZER DASHBOARD</span>
             </div>
@@ -226,7 +231,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
                 Arrivals Progression By Hour
               </h2>
-              <p className="text-xs text-slate-500">Live check-in throughput at Godswill Akpabio Event Centre gates</p>
+              <p className="text-xs text-slate-500">Live check-in throughput at event gates</p>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200">
               Peak: 08:00 - 10:00 AM

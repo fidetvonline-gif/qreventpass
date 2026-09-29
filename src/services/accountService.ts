@@ -1,4 +1,5 @@
 import { UserRole } from '../types';
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 export interface UserAccount {
   name: string;
@@ -10,81 +11,75 @@ export interface UserAccount {
 
 const STORAGE_KEY_USERS = 'eventpass_custom_users';
 
-const DEMO_EMAILS = [
-  'admin@godswillakpabioec.ng',
-  'organizer@eventpass.ng',
-  'emmanuel@gate.ng',
-  'guest@attendee.ng'
-];
-
-const DEFAULT_USERS: UserAccount[] = [];
-
 export const accountService = {
   getUsers(): UserAccount[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_USERS);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          // Filter out legacy demo accounts
-          const filtered = parsed.filter(
-            u => u && u.email && !DEMO_EMAILS.includes(u.email.toLowerCase().trim())
-          );
-          if (filtered.length !== parsed.length) {
-            localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(filtered));
-          }
-          return filtered;
-        }
+        return JSON.parse(stored);
       }
     } catch {}
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(DEFAULT_USERS));
-    return DEFAULT_USERS;
+    return [];
   },
 
-  hasAccount(email: string): boolean {
-    const users = this.getUsers();
-    return users.some(u => u.email.toLowerCase() === email.trim().toLowerCase());
-  },
-
-  getUserByEmail(email: string): UserAccount | undefined {
-    const users = this.getUsers();
-    return users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-  },
-
-  saveAccount(user: UserAccount): void {
-    const users = this.getUsers();
-    const cleanEmail = user.email.trim().toLowerCase();
-    const existingIdx = users.findIndex(u => u.email.toLowerCase() === cleanEmail);
-
-    if (existingIdx >= 0) {
-      users[existingIdx] = {
-        ...users[existingIdx],
-        ...user,
-        email: cleanEmail,
-      };
-    } else {
-      users.push({
-        ...user,
-        email: cleanEmail,
-        created_at: user.created_at || new Date().toISOString(),
-      });
+  async signUp(email: string, pass: string, name: string, role: UserRole): Promise<{ success: boolean; message: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+    
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabase();
+      if (supabase) {
+        const { error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: pass,
+          options: {
+            data: { full_name: name, role }
+          }
+        });
+        if (error) return { success: false, message: error.message };
+      }
     }
 
+    // Always fallback/persist to local for redundancy if requested, 
+    // but the goal is to replace. For now, we keep it for "offline" mode until fully migrated.
+    const users = this.getUsers();
+    users.push({ name, email: cleanEmail, pass, role, created_at: new Date().toISOString() });
     localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
     window.dispatchEvent(new CustomEvent('eventpass:users_updated'));
+    
+    return { success: true, message: 'Account created successfully.' };
   },
 
-  updateRole(email: string, newRole: UserRole): boolean {
-    const users = this.getUsers();
+  async signIn(email: string, pass: string): Promise<{ success: boolean; user?: UserAccount; message?: string }> {
     const cleanEmail = email.trim().toLowerCase();
-    const target = users.find(u => u.email.toLowerCase() === cleanEmail);
-    if (target) {
-      target.role = newRole;
-      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-      window.dispatchEvent(new CustomEvent('eventpass:users_updated'));
-      return true;
+
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabase();
+      if (supabase) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: pass,
+        });
+        
+        if (!error && data.user) {
+          return {
+            success: true,
+            user: {
+              name: data.user.user_metadata?.full_name || cleanEmail.split('@')[0],
+              email: cleanEmail,
+              pass: '********', // Don't expose
+              role: data.user.user_metadata?.role || 'organizer'
+            }
+          };
+        }
+      }
     }
-    return false;
+
+    // Local fallback
+    const users = this.getUsers();
+    const found = users.find(u => u.email.toLowerCase() === cleanEmail && u.pass === pass);
+    if (found) return { success: true, user: found };
+    
+    return { success: false, message: 'Invalid credentials.' };
   },
 
   deleteAccount(email: string): void {

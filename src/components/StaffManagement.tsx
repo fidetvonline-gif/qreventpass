@@ -42,10 +42,12 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ event }) => {
   const [password, setPassword] = useState('');
   const [systemRole, setSystemRole] = useState<UserRole>('scanner_staff');
 
-  const loadData = () => {
+  const loadData = async () => {
     if (!event) return;
-    const s = storage.getStaff(event.id);
-    const g = storage.getGates(event.id);
+    const [s, g] = await Promise.all([
+      storage.getStaff(event.id),
+      storage.getGates(event.id)
+    ]);
     const u = accountService.getUsers();
     setStaffList(s);
     setGates(g);
@@ -57,7 +59,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ event }) => {
 
   useEffect(() => {
     loadData();
-    const handleUpdate = () => loadData();
+    const handleUpdate = () => { loadData(); };
     window.addEventListener('eventpass:data_updated', handleUpdate);
     window.addEventListener('eventpass:users_updated', handleUpdate);
     return () => {
@@ -86,7 +88,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ event }) => {
     setStationRole(staff.role);
     setGateId(staff.gate_id || (gates[0]?.id || ''));
 
-    const existingAccount = accountService.getUserByEmail(staff.email);
+    const existingAccount = users.find(u => u.email.toLowerCase() === staff.email.toLowerCase());
     if (existingAccount) {
       setCreateAccount(true);
       setPassword(existingAccount.pass);
@@ -103,7 +105,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ event }) => {
     setShowAddModal(true);
   };
 
-  const handleSaveStaff = (e: React.FormEvent) => {
+  const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !email.trim() || !event) return;
 
@@ -126,58 +128,37 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ event }) => {
     };
 
     // Save Staff to Event Storage
-    storage.saveStaff(targetStaff);
+    await storage.saveStaff(targetStaff);
 
     // Save or update User Account in Account Service if requested
     if (createAccount) {
-      accountService.saveAccount({
-        name: fullName.trim(),
-        email: cleanEmail,
-        pass: password || 'password123',
-        role: systemRole,
-      });
+      if (editingStaff) {
+        // Just update role/pass for now in local
+        // Real Supabase Auth update would be more complex
+        accountService.deleteAccount(cleanEmail);
+      }
+      await accountService.signUp(cleanEmail, password || 'password123', fullName.trim(), systemRole);
     }
-
-    storage.logAudit(
-      'Super Admin',
-      'Super Administrator',
-      event.id,
-      editingStaff ? 'Staff Account Modified' : 'Staff Member & Account Created',
-      `Super Admin ${editingStaff ? 'updated' : 'created'} staff ${targetStaff.full_name} (${cleanEmail}) with system role [${systemRole}] at ${targetStaff.gate_name}`
-    );
 
     setShowAddModal(false);
     setEditingStaff(null);
     loadData();
   };
 
-  const handleToggleStaffActive = (staff: EventStaff) => {
+  const handleToggleStaffActive = async (staff: EventStaff) => {
     const updated = { ...staff, is_active: !staff.is_active };
-    storage.saveStaff(updated);
+    await storage.saveStaff(updated);
     loadData();
   };
 
-  const handleQuickCreateAccount = (staff: EventStaff) => {
+  const handleQuickCreateAccount = async (staff: EventStaff) => {
     const assignedRole: UserRole = 
       staff.role === 'Event Manager' ? 'organizer' : 'scanner_staff';
     
-    accountService.saveAccount({
-      name: staff.full_name,
-      email: staff.email,
-      pass: 'password123',
-      role: assignedRole,
-    });
+    await accountService.signUp(staff.email, 'password123', staff.full_name, assignedRole);
 
     const updated = { ...staff, system_role: assignedRole, has_account: true };
-    storage.saveStaff(updated);
-
-    storage.logAudit(
-      'Super Admin',
-      'Super Administrator',
-      event?.id || '',
-      'Staff Account Provisioned',
-      `Super Admin provisioned login account for ${staff.full_name} (${staff.email}) with role [${assignedRole}]`
-    );
+    await storage.saveStaff(updated);
 
     loadData();
   };

@@ -69,8 +69,8 @@ export default function App() {
     return true;
   });
 
-  const loadData = () => {
-    const allEvents = storage.getEvents();
+  const loadData = async () => {
+    const allEvents = await storage.getEvents();
     setEvents(allEvents);
     const activeId = storage.getActiveEventId();
     setActiveEventId(activeId);
@@ -78,23 +78,23 @@ export default function App() {
 
   useEffect(() => {
     loadData();
-    const handleUpdate = () => loadData();
+    const handleUpdate = () => { loadData(); };
     window.addEventListener('eventpass:data_updated', handleUpdate);
     return () => window.removeEventListener('eventpass:data_updated', handleUpdate);
   }, [currentUser]);
 
   const activeEvent = events.find((e) => e.id === activeEventId) || events[0] || {
     id: 'empty-event',
-    name: 'Godswill Akpabio Event Centre',
-    description: 'No events created yet. Please create your event in Events Management.',
-    venue: 'Godswill Akpabio Event Centre, Ukana, Akwa Ibom',
-    city: 'Uyo, Akwa Ibom State',
+    name: 'EventPass System',
+    description: 'Digital check-in management for Godswill Akpabio Event Centre ukana.',
+    venue: 'Godswill Akpabio Event Centre ukana',
+    city: 'Event City',
     event_date: new Date().toISOString().split('T')[0],
     start_time: '09:00 AM',
     end_time: '05:00 PM',
-    organizer_name: 'Godswill Akpabio Event Centre',
-    contact_email: 'events@godswillakpabioec.ng',
-    contact_phone: '+234 803 123 4567',
+    organizer_name: 'Event Organizer',
+    contact_email: 'events@example.com',
+    contact_phone: '+000 000 000 000',
     max_guests: 1000,
     status: 'draft',
     created_at: new Date().toISOString(),
@@ -148,7 +148,7 @@ export default function App() {
           <div className="mb-6 p-4 sm:p-6 bg-slate-900 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
             <div className="space-y-1 text-center sm:text-left">
               <h2 className="text-lg sm:text-xl font-bold">Welcome to EventPass Authentication</h2>
-              <p className="text-xs text-slate-300">Please sign in to your account or create a new account to access the system.</p>
+              <p className="text-xs text-slate-300">Official check-in system for Godswill Akpabio Event Centre ukana.</p>
             </div>
             <button
               onClick={() => setIsLoginModalOpen(true)}
@@ -179,7 +179,7 @@ export default function App() {
         {currentView === 'scanner' && (
           <Scanner
             event={activeEvent}
-            staffName={currentRole === 'scanner_staff' ? 'Officer Emmanuel Udoh' : 'Security Supervisor'}
+            staffName={currentRole === 'scanner_staff' ? 'Gate Officer' : 'Security Supervisor'}
           />
         )}
 
@@ -233,9 +233,9 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Building className="w-4 h-4 text-slate-400" />
-            <span className="font-semibold text-slate-700">EventPass System</span>
+            <span className="font-semibold text-slate-700">EventPass</span>
             <span>—</span>
-            <span>Digital QR Check-In & Gate Verification Platform</span>
+            <span>Godswill Akpabio Event Centre ukana</span>
           </div>
 
           <div className="flex items-center gap-3 text-[11px]">

@@ -47,14 +47,15 @@ export const GuestsList: React.FC<GuestsListProps> = ({ event }) => {
   const [newOrg, setNewOrg] = useState('');
   const [newCategory, setNewCategory] = useState<GuestCategory>('General Guest');
 
-  const loadGuests = () => {
+  const loadGuests = async () => {
     if (!event) return;
-    setGuests(storage.getGuests(event.id));
+    const g = await storage.getGuests(event.id);
+    setGuests(g);
   };
 
   useEffect(() => {
     loadGuests();
-    const handleUpdate = () => loadGuests();
+    const handleUpdate = () => { loadGuests(); };
     window.addEventListener('eventpass:data_updated', handleUpdate);
     return () => window.removeEventListener('eventpass:data_updated', handleUpdate);
   }, [event]);
@@ -86,26 +87,26 @@ export const GuestsList: React.FC<GuestsListProps> = ({ event }) => {
     setTimeout(() => setCopiedTokenId(null), 2000);
   };
 
-  const handleToggleActive = (id: string) => {
-    storage.toggleGuestActive(id);
+  const handleToggleActive = async (id: string) => {
+    await storage.toggleGuestActive(id);
     loadGuests();
   };
 
-  const handleRegenerateQR = (id: string) => {
+  const handleRegenerateQR = async (id: string) => {
     if (confirm('Regenerate QR pass for this attendee? The previous QR code will immediately stop working.')) {
-      storage.regenerateGuestToken(id);
+      await storage.regenerateGuestToken(id);
       loadGuests();
     }
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (confirm(`Are you sure you want to remove ${name} from this event?`)) {
-      storage.deleteGuest(id);
+      await storage.deleteGuest(id);
       loadGuests();
     }
   };
 
-  const handleCreateGuest = (e: React.FormEvent) => {
+  const handleCreateGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newEmail || !event) return;
 
@@ -126,13 +127,13 @@ export const GuestsList: React.FC<GuestsListProps> = ({ event }) => {
       updated_at: new Date().toISOString(),
     };
 
-    storage.saveGuest(newGuest);
+    await storage.saveGuest(newGuest);
     storage.logAudit(
       'Organizer',
       'Event Organizer',
       event.id,
       'Guest Added',
-      `Registered attendee ${newGuest.full_name} (${newGuest.category}) with token ${newGuest.qr_token}`
+      `Registered attendee ${newGuest.full_name} (${newGuest.category})`
     );
 
     setNewName('');
@@ -463,7 +464,7 @@ export const GuestsList: React.FC<GuestsListProps> = ({ event }) => {
             <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
               <div>
                 <h3 className="font-bold text-sm tracking-wide">REGISTER INDIVIDUAL GUEST</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Godswill Akpabio Event Centre Official Portal</p>
+                <p className="text-xs text-slate-400 mt-0.5">Event Management Portal</p>
               </div>
               <button
                 onClick={() => setShowAddGuestModal(false)}

@@ -141,7 +141,7 @@ Samuel Nsikak,samuel@startuphub.ng,08092345678,Partner,StartupHub Inc`;
     reader.readAsText(file);
   };
 
-  const handleConfirmImport = () => {
+  const handleConfirmImport = async () => {
     const validOnes = parsedRows.filter(r => r.isValid);
     if (validOnes.length === 0) {
       setErrorMsg('No valid rows found to import.');
@@ -150,7 +150,7 @@ Samuel Nsikak,samuel@startuphub.ng,08092345678,Partner,StartupHub Inc`;
 
     setIsImporting(true);
 
-    validOnes.forEach((row) => {
+    for (const row of validOnes) {
       const newGuest: Guest = {
         id: `gst-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         event_id: eventId,
@@ -167,15 +167,15 @@ Samuel Nsikak,samuel@startuphub.ng,08092345678,Partner,StartupHub Inc`;
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      storage.saveGuest(newGuest);
-    });
+      await storage.saveGuest(newGuest);
+    }
 
     storage.logAudit(
       'Organizer',
       'Event Organizer',
       eventId,
       'Bulk Guest Import',
-      `Imported ${validOnes.length} guests via CSV (${fileName}).`
+      `Imported ${validOnes.length} guests via CSV.`
     );
 
     setIsImporting(false);

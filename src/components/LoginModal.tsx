@@ -21,14 +21,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
 
   if (!isOpen) return null;
 
-  const getLocalUsers = (): UserAccount[] => {
-    return accountService.getUsers();
-  };
-
-  const saveLocalUser = (user: UserAccount) => {
-    accountService.saveAccount(user);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -45,83 +37,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       let resolvedName = fullName.trim();
       let resolvedRole = role;
 
-      if (isSupabaseConfigured()) {
-        const supabase = getSupabase();
-        if (supabase) {
-          if (isRegistering) {
-            const { error: signUpErr } = await supabase.auth.signUp({
-              email: cleanEmail,
-              password,
-              options: {
-                data: { full_name: resolvedName, role }
-              }
-            });
-            if (signUpErr) {
-              console.warn('Supabase sign up notice:', signUpErr.message);
-            }
-            saveLocalUser({ name: resolvedName, email: cleanEmail, pass: password, role });
-          } else {
-            const { error: signInErr } = await supabase.auth.signInWithPassword({
-              email: cleanEmail,
-              password,
-            });
-            if (signInErr) {
-              // fallback to local users check
-              const users = getLocalUsers();
-              const found = users.find(u => u.email.toLowerCase() === cleanEmail && u.pass === password);
-              if (!found) {
-                throw new Error(signInErr.message || 'Invalid email or password.');
-              } else {
-                resolvedName = found.name;
-                resolvedRole = found.role;
-              }
-            }
-          }
-        }
-      } else {
-        // Local storage authentication mode
-        const users = getLocalUsers();
-        if (isRegistering) {
-          if (!resolvedName) {
-            setError('Please enter your full name.');
-            setLoading(false);
-            return;
-          }
-          const existing = users.find(u => u.email.toLowerCase() === cleanEmail);
-          if (existing) {
-            throw new Error('An account with this email already exists. Please sign in instead.');
-          }
-          saveLocalUser({ name: resolvedName, email: cleanEmail, pass: password, role });
-          resolvedRole = role;
-        } else {
-          const found = users.find(u => u.email.toLowerCase() === cleanEmail && u.pass === password);
-          if (!found) {
-            if (users.length === 0) {
-              // If system has no accounts yet, allow initial admin creation
-              const newUser = {
-                name: resolvedName || cleanEmail.split('@')[0],
-                email: cleanEmail,
-                pass: password,
-                role: 'super_admin' as UserRole
-              };
-              saveLocalUser(newUser);
-              resolvedName = newUser.name;
-              resolvedRole = newUser.role;
-            } else {
-              throw new Error('Invalid email or password. Please check your credentials or create an account.');
-            }
-          } else {
-            resolvedName = found.name;
-            resolvedRole = found.role;
-          }
-        }
+      const result = isRegistering 
+        ? await accountService.signUp(cleanEmail, password, resolvedName, resolvedRole)
+        : await accountService.signIn(cleanEmail, password);
+
+      if (!result.success) {
+        throw new Error(result.message || 'Authentication failed.');
       }
 
-      onLoginSuccess({
+      const user = result.user || {
         name: resolvedName || cleanEmail.split('@')[0],
         email: cleanEmail,
         role: resolvedRole
-      });
+      };
+
+      onLoginSuccess(user);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please check credentials.');
@@ -141,9 +71,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             </div>
             <div>
               <h2 className="text-base font-bold">
-                {isRegistering ? 'Create EventPass Account' : 'Sign In to EventPass'}
+                {isRegistering ? 'Create Account' : 'Sign In to EventPass'}
               </h2>
-              <p className="text-xs text-slate-400">Godswill Akpabio Event Centre</p>
+              <p className="text-xs text-slate-400">Godswill Akpabio Event Centre ukana</p>
             </div>
           </div>
           <button
@@ -231,7 +161,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               disabled={loading}
               className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <span>{loading ? 'Processing...' : isRegistering ? 'Create New Account' : 'Sign In to EventPass'}</span>
+              <span>{loading ? 'Processing...' : isRegistering ? 'Create New Account' : 'Sign In to Portal'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

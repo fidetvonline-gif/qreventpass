@@ -14,10 +14,12 @@ export const GatesManagement: React.FC<GatesManagementProps> = ({ event }) => {
   const [location, setLocation] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<GuestCategory[]>(['General Guest']);
 
-  const loadGates = () => {
+  const loadGates = async () => {
     if (!event) return;
-    const g = storage.getGates(event.id);
-    const logs = storage.getAttendanceLogs(event.id);
+    const [g, logs] = await Promise.all([
+      storage.getGates(event.id),
+      storage.getAttendanceLogs(event.id)
+    ]);
     // Enrich with scan count
     const enriched = g.map(item => ({
       ...item,
@@ -28,7 +30,7 @@ export const GatesManagement: React.FC<GatesManagementProps> = ({ event }) => {
 
   useEffect(() => {
     loadGates();
-    const handleUpdate = () => loadGates();
+    const handleUpdate = () => { loadGates(); };
     window.addEventListener('eventpass:data_updated', handleUpdate);
     return () => window.removeEventListener('eventpass:data_updated', handleUpdate);
   }, [event]);
@@ -45,7 +47,7 @@ export const GatesManagement: React.FC<GatesManagementProps> = ({ event }) => {
     }
   };
 
-  const handleCreateGate = (e: React.FormEvent) => {
+  const handleCreateGate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !event) return;
 
@@ -59,13 +61,13 @@ export const GatesManagement: React.FC<GatesManagementProps> = ({ event }) => {
       created_at: new Date().toISOString(),
     };
 
-    storage.saveGate(newGate);
+    await storage.saveGate(newGate);
     storage.logAudit(
       'Organizer',
       'Event Organizer',
       event.id,
       'Gate Added',
-      `Configured entrance gate: ${newGate.name} at ${newGate.location}`
+      `Configured entrance gate: ${newGate.name}`
     );
 
     setName('');
@@ -75,9 +77,9 @@ export const GatesManagement: React.FC<GatesManagementProps> = ({ event }) => {
     loadGates();
   };
 
-  const handleToggleGateActive = (gate: Gate) => {
+  const handleToggleGateActive = async (gate: Gate) => {
     const updated = { ...gate, is_active: !gate.is_active };
-    storage.saveGate(updated);
+    await storage.saveGate(updated);
     loadGates();
   };
 
@@ -88,7 +90,7 @@ export const GatesManagement: React.FC<GatesManagementProps> = ({ event }) => {
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
             <Building className="w-3.5 h-3.5 text-slate-400" />
-            <span>Godswill Akpabio Event Centre</span>
+            <span>Event Management</span>
             <span>•</span>
             <span className="text-slate-900 font-bold">Entrance Architecture</span>
           </div>
@@ -199,7 +201,7 @@ export const GatesManagement: React.FC<GatesManagementProps> = ({ event }) => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Physical Location at Godswill Akpabio Event Centre
+                  Physical Location
                 </label>
                 <input
                   type="text"

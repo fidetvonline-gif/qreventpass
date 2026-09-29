@@ -15,36 +15,50 @@ export const EventsManagement: React.FC<EventsManagementProps> = ({ onSelectEven
   // Form
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [venue, setVenue] = useState('Godswill Akpabio Event Centre, Main Auditorium');
-  const [city, setCity] = useState('Uyo, Akwa Ibom State');
+  const [venue, setVenue] = useState('Main Event Hall');
+  const [city, setCity] = useState('Central City');
   const [eventDate, setEventDate] = useState('2026-10-15');
   const [startTime, setStartTime] = useState('09:00 AM');
   const [endTime, setEndTime] = useState('05:00 PM');
-  const [organizerName, setOrganizerName] = useState('Akwa Ibom Event Management Board');
-  const [contactEmail, setContactEmail] = useState('contact@godswillakpabioec.ng');
-  const [contactPhone, setContactPhone] = useState('+234 803 123 4567');
+  const [organizerName, setOrganizerName] = useState('Event Management Board');
+  const [contactEmail, setContactEmail] = useState('contact@example.com');
+  const [contactPhone, setContactPhone] = useState('+000 000 000 000');
   const [maxGuests, setMaxGuests] = useState<number>(1000);
   const [status, setStatus] = useState<EventStatus>('published');
 
-  const loadEvents = () => {
-    setEvents(storage.getEvents());
+  const [eventStats, setEventStats] = useState<{[key: string]: {registered: number, checkedIn: number}}>({});
+
+  const loadEvents = async () => {
+    const list = await storage.getEvents();
+    setEvents(list);
+    
+    // Load stats for each event
+    const stats: {[key: string]: {registered: number, checkedIn: number}} = {};
+    for (const evt of list) {
+      const gList = await storage.getGuests(evt.id);
+      stats[evt.id] = {
+        registered: gList.length,
+        checkedIn: gList.filter(g => g.check_in_status === 'checked_in').length
+      };
+    }
+    setEventStats(stats);
   };
 
   useEffect(() => {
     loadEvents();
-    const handleUpdate = () => loadEvents();
+    const handleUpdate = () => { loadEvents(); };
     window.addEventListener('eventpass:data_updated', handleUpdate);
     return () => window.removeEventListener('eventpass:data_updated', handleUpdate);
   }, []);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     const newEvent: EventItem = {
       id: `evt-${Date.now()}`,
       name: name.trim(),
-      description: description.trim() || 'Official conference and gathering hosted at Godswill Akpabio Event Centre.',
+      description: description.trim() || 'Official conference and gathering hosted at the Godswill Akpabio Event Centre ukana.',
       venue: venue.trim(),
       city: city.trim(),
       event_date: eventDate,
@@ -59,7 +73,7 @@ export const EventsManagement: React.FC<EventsManagementProps> = ({ onSelectEven
       updated_at: new Date().toISOString(),
     };
 
-    storage.saveEvent(newEvent);
+    await storage.saveEvent(newEvent);
     storage.setActiveEventId(newEvent.id);
     onSelectEvent(newEvent.id);
 
@@ -75,7 +89,7 @@ export const EventsManagement: React.FC<EventsManagementProps> = ({ onSelectEven
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
             <Building className="w-3.5 h-3.5 text-slate-400" />
-            <span>Godswill Akpabio Event Centre</span>
+            <span>Event Management</span>
             <span>•</span>
             <span className="text-slate-900 font-bold">Event Roster</span>
           </div>
@@ -99,8 +113,7 @@ export const EventsManagement: React.FC<EventsManagementProps> = ({ onSelectEven
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {events.map((evt) => {
           const isCurrent = evt.id === activeEventId;
-          const guestCount = storage.getGuests(evt.id).length;
-          const checkinCount = storage.getGuests(evt.id).filter(g => g.check_in_status === 'checked_in').length;
+          const stats = eventStats[evt.id] || { registered: 0, checkedIn: 0 };
 
           return (
             <div
@@ -163,7 +176,7 @@ export const EventsManagement: React.FC<EventsManagementProps> = ({ onSelectEven
                   <div className="flex items-center gap-2">
                     <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span>
-                      <strong>{guestCount}</strong> registered / <strong>{checkinCount}</strong> checked in (Max {evt.max_guests})
+                      <strong>{stats.registered}</strong> registered / <strong>{stats.checkedIn}</strong> checked in (Max {evt.max_guests})
                     </span>
                   </div>
                 </div>
@@ -199,7 +212,7 @@ export const EventsManagement: React.FC<EventsManagementProps> = ({ onSelectEven
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs overflow-y-auto">
           <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6">
             <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
-              <h3 className="font-bold text-sm tracking-wide">CREATE EVENT (GODSWILL AKPABIO EVENT CENTRE)</h3>
+              <h3 className="font-bold text-sm tracking-wide">CREATE EVENT</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="p-1 rounded-lg text-slate-400 hover:text-white"
@@ -296,7 +309,7 @@ export const EventsManagement: React.FC<EventsManagementProps> = ({ onSelectEven
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Specific Hall / Venue at Godswill Akpabio Event Centre
+                  Specific Hall / Venue
                 </label>
                 <input
                   type="text"

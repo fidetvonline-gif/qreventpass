@@ -53,10 +53,10 @@ export const Scanner: React.FC<ScannerProps> = ({
     const testGuest: Guest = {
       id: `gst-${Date.now()}`,
       event_id: event.id,
-      full_name: 'Dr. John Umoh (Test VIP)',
-      email: 'john.umoh@example.com',
-      phone: '+234 803 123 4567',
-      organization: 'Godswill Akpabio Event Centre Delegation',
+      full_name: 'Dr. John Doe (Test VIP)',
+      email: 'john.doe@example.com',
+      phone: '+000 000 000 000',
+      organization: 'Official Delegation',
       category: 'VIP',
       reference_number: generateReferenceNumber(),
       qr_token: generateToken(),
@@ -77,31 +77,33 @@ export const Scanner: React.FC<ScannerProps> = ({
   const disabledGuest = availableGuests.find(g => !g.is_active) || availableGuests[0];
 
   // Load gates, guests, and recent scans
-  const refreshData = () => {
+  const refreshData = async () => {
     if (!event) return;
-    const g = storage.getGates(event.id);
+    const g = await storage.getGates(event.id);
     setGates(g);
     if (!selectedGateId && g.length > 0) {
       const match = defaultGateId ? g.find(item => item.id === defaultGateId) : null;
       setSelectedGateId(match ? match.id : g[0].id);
     }
-    setRecentScans(storage.getAttendanceLogs(event.id).slice(0, 8));
-    setAvailableGuests(storage.getGuests(event.id));
+    const logs = await storage.getAttendanceLogs(event.id);
+    setRecentScans(logs.slice(0, 8));
+    const guestsList = await storage.getGuests(event.id);
+    setAvailableGuests(guestsList);
   };
 
   useEffect(() => {
     refreshData();
-    const handleUpdate = () => refreshData();
+    const handleUpdate = () => { refreshData(); };
     window.addEventListener('eventpass:data_updated', handleUpdate);
     return () => window.removeEventListener('eventpass:data_updated', handleUpdate);
   }, [event, defaultGateId]);
 
   // Handle Token Verification
-  const processToken = (tokenStr: string) => {
+  const processToken = async (tokenStr: string) => {
     if (!tokenStr.trim() || isProcessing) return;
     setIsProcessing(true);
 
-    const result = storage.verifyAndCheckIn(
+    const result = await storage.verifyAndCheckIn(
       tokenStr.trim(),
       selectedGateId,
       staffName,
@@ -209,7 +211,7 @@ export const Scanner: React.FC<ScannerProps> = ({
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <Building className="w-3.5 h-3.5 text-slate-400" />
-              <span>Godswill Akpabio Event Centre</span>
+              <span>Godswill Akpabio Event Centre ukana</span>
               <span>•</span>
               <span className="text-emerald-600 font-bold">LIVE AUTHENTICATION</span>
             </div>

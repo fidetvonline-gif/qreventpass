@@ -1,6 +1,6 @@
 {
-  "name": "EventPass — Godswill Akpabio Event Centre (Ukana, Akwa Ibom)",
-  "description": "QR Code-based guest authentication and real-time attendance tracking system for events at Godswill Akpabio Event Centre (Ukana, Akwa Ibom).",
+  "name": "EventPass",
+  "description": "Digital QR Check-In system for Godswill Akpabio Event Centre ukana.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -105,55 +105,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ events, activeEvent, o
           </p>
         </div>
       </section>
-
-      {/* Featured Summit Section */}
-      {activeEvent && (
-        <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-3 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
-                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                Active Showcase Session
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-                {activeEvent.name}
-              </h2>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {activeEvent.description}
-              </p>
-
-              <div className="flex flex-wrap gap-4 text-xs text-slate-500 pt-1">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-slate-400" />
-                  <span>{new Date(activeEvent.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                  <span>{activeEvent.start_time} - {activeEvent.end_time}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-slate-400" />
-                  <span>{activeEvent.venue}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 text-center space-y-3 shrink-0">
-              <div className="text-xs font-semibold text-slate-500">Attendee Pass Desk</div>
-              <div className="text-2xl font-black text-slate-900">Digital QR Admission</div>
-              <p className="text-[11px] text-slate-500 max-w-[220px]">
-                Instant pass generation for VIPs, speakers, media, and general attendees.
-              </p>
-              <button
-                onClick={() => onNavigate('public_register')}
-                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors"
-              >
-                Register For Pass
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
     </div>
   );
 };

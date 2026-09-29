@@ -26,20 +26,26 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ event }) => {
   const [selectedGate, setSelectedGate] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  const loadData = () => {
+  const [guests, setGuests] = useState<Guest[]>([]);
+
+  const loadData = async () => {
     if (!event) return;
-    setLogs(storage.getAttendanceLogs(event.id));
-    setGates(storage.getGates(event.id));
+    const [logsList, gatesList, guestsList] = await Promise.all([
+      storage.getAttendanceLogs(event.id),
+      storage.getGates(event.id),
+      storage.getGuests(event.id)
+    ]);
+    setLogs(logsList);
+    setGates(gatesList);
+    setGuests(guestsList);
   };
 
   useEffect(() => {
     loadData();
-    const handleUpdate = () => loadData();
+    const handleUpdate = () => { loadData(); };
     window.addEventListener('eventpass:data_updated', handleUpdate);
     return () => window.removeEventListener('eventpass:data_updated', handleUpdate);
   }, [event]);
-
-  const guests = event ? storage.getGuests(event.id) : [];
   const totalGuests = guests.length;
   const checkedInCount = guests.filter(g => g.check_in_status === 'checked_in').length;
   const pendingCount = totalGuests - checkedInCount;
@@ -98,7 +104,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ event }) => {
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <Building className="w-3.5 h-3.5 text-slate-400" />
-              <span>Godswill Akpabio Event Centre</span>
+              <span>Godswill Akpabio Event Centre ukana</span>
               <span>•</span>
               <span className="text-slate-900 font-bold">OFFICIAL ATTENDANCE REPORT</span>
             </div>

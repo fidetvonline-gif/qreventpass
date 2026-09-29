@@ -48,12 +48,13 @@ export const PublicRegistration: React.FC<PublicRegistrationProps> = ({ event })
     );
   }
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
     const cleanEmail = email.trim().toLowerCase();
-    const existing = storage.getGuests(event.id).find(g => g.email.toLowerCase() === cleanEmail);
+    const guestsList = await storage.getGuests(event.id);
+    const existing = guestsList.find(g => g.email.toLowerCase() === cleanEmail);
 
     if (existing) {
       setErrorMsg(`An invitation pass has already been generated for ${cleanEmail}. Click 'Retrieve Existing Pass' to access your QR pass.`);
@@ -77,25 +78,26 @@ export const PublicRegistration: React.FC<PublicRegistrationProps> = ({ event })
       updated_at: new Date().toISOString(),
     };
 
-    storage.saveGuest(newGuest);
+    await storage.saveGuest(newGuest);
     storage.logAudit(
       newGuest.full_name,
       'Guest',
       event.id,
       'Online Guest Registration',
-      `Registered for ${event.name} as ${newGuest.category}. Assigned QR Token: ${newGuest.qr_token}`
+      `Registered for ${event.name} as ${newGuest.category}.`
     );
 
     setGeneratedGuest(newGuest);
   };
 
-  const handleLookup = (e: React.FormEvent) => {
+  const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLookupError(null);
     const q = lookupQuery.trim().toLowerCase();
     if (!q) return;
 
-    const guest = storage.getGuests(event.id).find(
+    const guestsList = await storage.getGuests(event.id);
+    const guest = guestsList.find(
       g => g.email.toLowerCase() === q || g.qr_token.toLowerCase() === q || g.reference_number.toLowerCase() === q
     );
 
@@ -113,7 +115,7 @@ export const PublicRegistration: React.FC<PublicRegistrationProps> = ({ event })
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold mb-2">
           <Building className="w-3.5 h-3.5 text-slate-500" />
-          <span>Godswill Akpabio Event Centre, Uyo</span>
+          <span>Godswill Akpabio Event Centre ukana</span>
         </div>
         <h1 className="text-2xl font-bold text-slate-900 leading-tight">
           {event.name}

@@ -85,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="bg-slate-900 text-slate-300 text-xs px-4 py-1.5 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span className="font-semibold text-white tracking-wide">EventPass</span>
+          <span className="font-semibold text-white tracking-wide truncate max-w-[180px] sm:max-w-none">Godswill Akpabio Event Centre ukana</span>
           <span className="text-slate-500">•</span>
           <span className="text-slate-400 text-[11px] truncate">
             Digital QR Check-In & Gate Authentication
