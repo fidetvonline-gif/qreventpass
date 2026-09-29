@@ -28,13 +28,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ events, activeEvent, o
     <div className="space-y-12 max-w-6xl mx-auto py-4">
       {/* Hero Section */}
       <section className="text-center space-y-6 pt-4 sm:pt-8 pb-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold">
-          <Building className="w-3.5 h-3.5 text-slate-600" />
-          <span>Case Study: Godswill Akpabio Event Centre</span>
-          <span className="text-slate-300">•</span>
-          <span className="text-emerald-700 font-bold">Production MVP</span>
-        </div>
-
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight max-w-3xl mx-auto leading-[1.15]">
           Fast. Secure. Digital Event Check-In & Authentication.
         </h1>
@@ -161,23 +154,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ events, activeEvent, o
           </div>
         </section>
       )}
-
-      {/* Case Study Context Footer Strip */}
-      <section className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 text-xs text-slate-600 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <span className="font-bold text-slate-900 block">Academic Research Project Benchmark</span>
-          <span className="text-slate-500">
-            Godswill Akpabio Event Centre case study — reducing guest verification latency from 45 seconds manual queueing to under 2 seconds.
-          </span>
-        </div>
-        <button
-          onClick={() => onNavigate('scanner')}
-          className="inline-flex items-center gap-1.5 font-bold text-slate-900 hover:text-emerald-700 transition-colors shrink-0"
-        >
-          <span>Test Entrance Verification</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </section>
     </div>
   );
 };

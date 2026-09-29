@@ -57,7 +57,6 @@ export const SupabaseModal: React.FC<SupabaseModalProps> = ({ isOpen, onClose })
 
   const schemaSQL = `-- ==============================================================================
 -- EVENTPASS DATABASE SCHEMA (SUPABASE / POSTGRESQL)
--- Case Study: Godswill Akpabio Event Centre, Uyo, Akwa Ibom State
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

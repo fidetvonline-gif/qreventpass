@@ -21,417 +21,23 @@ const STORAGE_KEYS = {
   ACTIVE_EVENT_ID: 'eventpass_active_event_id',
 };
 
-// Seed initial events centered on Godswill Akpabio Event Centre
-const INITIAL_EVENTS: EventItem[] = [
-  {
-    id: 'evt-gaec-2026-01',
-    name: 'Akwa Ibom Tech & Leadership Summit 2026',
-    description: 'Premier national summit bringing together technologists, entrepreneurs, policymakers, and civic leaders for digital transformation and enterprise excellence.',
-    venue: 'Godswill Akpabio Event Centre, Banquet Hall & Auditorium',
-    city: 'Uyo, Akwa Ibom State',
-    event_date: '2026-09-25',
-    start_time: '09:00 AM',
-    end_time: '05:30 PM',
-    organizer_name: 'Akwa Ibom State Innovation Bureau',
-    contact_email: 'events@godswillakpabioec.ng',
-    contact_phone: '+234 803 123 4567',
-    max_guests: 1500,
-    status: 'ongoing',
-    created_at: '2026-09-01T08:00:00Z',
-    updated_at: '2026-09-18T05:00:00Z',
-  },
-  {
-    id: 'evt-gaec-2026-02',
-    name: 'South-South Enterprise & Gala Awards',
-    description: 'An evening honoring outstanding business pioneers, creative leaders, and community builders in the Niger Delta region.',
-    venue: 'Grand Dome, Godswill Akpabio Event Centre',
-    city: 'Uyo, Akwa Ibom State',
-    event_date: '2026-10-12',
-    start_time: '06:00 PM',
-    end_time: '11:00 PM',
-    organizer_name: 'Regional Enterprise Council',
-    contact_email: 'contact@enterpriseawards.ng',
-    contact_phone: '+234 802 987 6543',
-    max_guests: 800,
-    status: 'published',
-    created_at: '2026-09-10T10:00:00Z',
-    updated_at: '2026-09-15T12:00:00Z',
-  },
-];
-
-const INITIAL_GATES: Gate[] = [
-  {
-    id: 'gate-01',
-    event_id: 'evt-gaec-2026-01',
-    name: 'Gate A — Main Entrance',
-    location: 'North Concourse, West Wing',
-    assigned_categories: ['General Guest', 'Student', 'Partner'],
-    is_active: true,
-    created_at: '2026-09-02T09:00:00Z',
-  },
-  {
-    id: 'gate-02',
-    event_id: 'evt-gaec-2026-01',
-    name: 'Gate B — VIP & Executive Pavilion',
-    location: 'East Wing Private Driveway',
-    assigned_categories: ['VIP', 'Government Official', 'Speaker'],
-    is_active: true,
-    created_at: '2026-09-02T09:00:00Z',
-  },
-  {
-    id: 'gate-03',
-    event_id: 'evt-gaec-2026-01',
-    name: 'Gate C — Media & Press Gate',
-    location: 'South Media Terrace',
-    assigned_categories: ['Media', 'Staff'],
-    is_active: true,
-    created_at: '2026-09-02T09:00:00Z',
-  },
-  {
-    id: 'gate-04',
-    event_id: 'evt-gaec-2026-01',
-    name: 'Gate D — Logistics & Crew Gate',
-    location: 'Service Quadrangle',
-    assigned_categories: ['Staff'],
-    is_active: true,
-    created_at: '2026-09-02T09:00:00Z',
-  },
-];
-
-const INITIAL_STAFF: EventStaff[] = [
-  {
-    id: 'staff-01',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Emmanuel Udoh',
-    email: 'emmanuel.udoh@eventpass.ng',
-    phone: '+234 802 111 2233',
-    role: 'Scanner Staff',
-    gate_id: 'gate-01',
-    gate_name: 'Gate A — Main Entrance',
-    is_active: true,
-    created_at: '2026-09-05T08:00:00Z',
-  },
-  {
-    id: 'staff-02',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Aniebiet Bassey',
-    email: 'aniebiet.b@eventpass.ng',
-    phone: '+234 803 222 3344',
-    role: 'Scanner Staff',
-    gate_id: 'gate-02',
-    gate_name: 'Gate B — VIP & Executive Pavilion',
-    is_active: true,
-    created_at: '2026-09-05T08:00:00Z',
-  },
-  {
-    id: 'staff-03',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Kufre Ekpo',
-    email: 'kufre.ekpo@eventpass.ng',
-    phone: '+234 805 333 4455',
-    role: 'Security',
-    gate_id: 'gate-03',
-    gate_name: 'Gate C — Media & Press Gate',
-    is_active: true,
-    created_at: '2026-09-05T08:00:00Z',
-  },
-  {
-    id: 'staff-04',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Nsikak Sunday',
-    email: 'nsikak.sunday@eventpass.ng',
-    phone: '+234 808 444 5566',
-    role: 'Event Manager',
-    gate_id: 'gate-01',
-    gate_name: 'Gate A — Main Entrance',
-    is_active: true,
-    created_at: '2026-09-05T08:00:00Z',
-  },
-];
-
-const INITIAL_GUESTS: Guest[] = [
-  {
-    id: 'gst-001',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Dr. John Umoh',
-    email: 'john.umoh@fintechafrica.org',
-    phone: '+234 802 345 6789',
-    organization: 'FinTech Africa Consortium',
-    category: 'VIP',
-    reference_number: 'REF-789012',
-    qr_token: 'EVP-8F7A-92K4-XP21',
-    assigned_gate_id: 'gate-02',
-    is_active: true,
-    check_in_status: 'pending',
-    check_in_count: 0,
-    created_at: '2026-09-12T10:15:00Z',
-    updated_at: '2026-09-12T10:15:00Z',
-  },
-  {
-    id: 'gst-002',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Mary Asuquo James',
-    email: 'mary.james@datasphere.io',
-    phone: '+234 808 765 4321',
-    organization: 'DataSphere Global',
-    category: 'Speaker',
-    reference_number: 'REF-451290',
-    qr_token: 'EVP-3M9B-7L2P-99QW',
-    assigned_gate_id: 'gate-02',
-    is_active: true,
-    check_in_status: 'checked_in',
-    first_check_in_time: '2026-09-18T08:42:15Z',
-    first_check_in_gate: 'Gate B — VIP & Executive Pavilion',
-    check_in_count: 1,
-    created_at: '2026-09-12T11:00:00Z',
-    updated_at: '2026-09-18T08:42:15Z',
-  },
-  {
-    id: 'gst-003',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Barr. Obot Idongesit',
-    email: 'idongesit.obot@justice.gov.ng',
-    phone: '+234 803 555 1212',
-    organization: 'Ministry of Digital Economy',
-    category: 'Government Official',
-    reference_number: 'REF-334901',
-    qr_token: 'EVP-6K1X-4V8D-ZZ55',
-    assigned_gate_id: 'gate-02',
-    is_active: true,
-    check_in_status: 'checked_in',
-    first_check_in_time: '2026-09-18T08:50:30Z',
-    first_check_in_gate: 'Gate B — VIP & Executive Pavilion',
-    check_in_count: 1,
-    created_at: '2026-09-13T09:20:00Z',
-    updated_at: '2026-09-18T08:50:30Z',
-  },
-  {
-    id: 'gst-004',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Chioma Grace Okafor',
-    email: 'chioma.okafor@techstars.com',
-    phone: '+234 814 999 8877',
-    organization: 'Techstars Hub Uyo',
-    category: 'Partner',
-    reference_number: 'REF-889102',
-    qr_token: 'EVP-5T8R-3W2Y-PL10',
-    assigned_gate_id: 'gate-01',
-    is_active: true,
-    check_in_status: 'pending',
-    check_in_count: 0,
-    created_at: '2026-09-14T14:30:00Z',
-    updated_at: '2026-09-14T14:30:00Z',
-  },
-  {
-    id: 'gst-005',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'David Peter Akpan',
-    email: 'david.akpan@channels.tv',
-    phone: '+234 809 123 9876',
-    organization: 'Channels Television Network',
-    category: 'Media',
-    reference_number: 'REF-112344',
-    qr_token: 'EVP-2N7U-8K5J-TT44',
-    assigned_gate_id: 'gate-03',
-    is_active: true,
-    check_in_status: 'checked_in',
-    first_check_in_time: '2026-09-18T08:55:10Z',
-    first_check_in_gate: 'Gate C — Media & Press Gate',
-    check_in_count: 1,
-    created_at: '2026-09-14T16:00:00Z',
-    updated_at: '2026-09-18T08:55:10Z',
-  },
-  {
-    id: 'gst-006',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Blessing Effiong Bassey',
-    email: 'blessing.effiong@uniuyo.edu.ng',
-    phone: '+234 806 777 6655',
-    organization: 'University of Uyo (Computer Science Dept)',
-    category: 'Student',
-    reference_number: 'REF-667821',
-    qr_token: 'EVP-9P4S-1Z7M-BB88',
-    assigned_gate_id: 'gate-01',
-    is_active: true,
-    check_in_status: 'pending',
-    check_in_count: 0,
-    created_at: '2026-09-15T10:10:00Z',
-    updated_at: '2026-09-15T10:10:00Z',
-  },
-  {
-    id: 'gst-007',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Tunde Olawale Balogun',
-    email: 'tunde@cloudscale.ng',
-    phone: '+234 812 333 9900',
-    organization: 'CloudScale Infrastructure',
-    category: 'General Guest',
-    reference_number: 'REF-990145',
-    qr_token: 'EVP-4K8V-9Q3W-XX12',
-    assigned_gate_id: 'gate-01',
-    is_active: true,
-    check_in_status: 'checked_in',
-    first_check_in_time: '2026-09-18T09:12:04Z',
-    first_check_in_gate: 'Gate A — Main Entrance',
-    check_in_count: 1,
-    created_at: '2026-09-15T12:00:00Z',
-    updated_at: '2026-09-18T09:12:04Z',
-  },
-  {
-    id: 'gst-008',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Engr. Victor Etim',
-    email: 'victor.etim@akspower.com',
-    phone: '+234 803 888 2211',
-    organization: 'Ibom Power Company',
-    category: 'VIP',
-    reference_number: 'REF-552199',
-    qr_token: 'EVP-7L1M-5R6K-VV33',
-    assigned_gate_id: 'gate-02',
-    is_active: true,
-    check_in_status: 'pending',
-    check_in_count: 0,
-    created_at: '2026-09-15T15:45:00Z',
-    updated_at: '2026-09-15T15:45:00Z',
-  },
-  {
-    id: 'gst-009',
-    event_id: 'evt-gaec-2026-01',
-    full_name: 'Praise Samuel Nwafor',
-    email: 'praise.nwafor@cancelled-invite.com',
-    phone: '+234 807 444 3322',
-    organization: 'Ex-Vendor Services',
-    category: 'General Guest',
-    reference_number: 'REF-009812',
-    qr_token: 'EVP-1D4F-8G9H-CANCELLED',
-    assigned_gate_id: 'gate-01',
-    is_active: false, // Inactive / Cancelled
-    check_in_status: 'pending',
-    check_in_count: 0,
-    created_at: '2026-09-16T08:00:00Z',
-    updated_at: '2026-09-17T11:00:00Z',
-  }
-];
-
-const INITIAL_ATTENDANCE: AttendanceLog[] = [
-  {
-    id: 'att-001',
-    event_id: 'evt-gaec-2026-01',
-    guest_id: 'gst-002',
-    guest_name: 'Mary Asuquo James',
-    guest_category: 'Speaker',
-    guest_organization: 'DataSphere Global',
-    qr_token: 'EVP-3M9B-7L2P-99QW',
-    gate_id: 'gate-02',
-    gate_name: 'Gate B — VIP & Executive Pavilion',
-    scanner_user_id: 'staff-02',
-    scanner_user_name: 'Aniebiet Bassey',
-    scan_time: '2026-09-18T08:42:15Z',
-    status: 'valid',
-    device_info: 'Chrome on Galaxy Tab S9 (Gate B Terminal)',
-  },
-  {
-    id: 'att-002',
-    event_id: 'evt-gaec-2026-01',
-    guest_id: 'gst-003',
-    guest_name: 'Barr. Obot Idongesit',
-    guest_category: 'Government Official',
-    guest_organization: 'Ministry of Digital Economy',
-    qr_token: 'EVP-6K1X-4V8D-ZZ55',
-    gate_id: 'gate-02',
-    gate_name: 'Gate B — VIP & Executive Pavilion',
-    scanner_user_id: 'staff-02',
-    scanner_user_name: 'Aniebiet Bassey',
-    scan_time: '2026-09-18T08:50:30Z',
-    status: 'valid',
-    device_info: 'Chrome on Galaxy Tab S9 (Gate B Terminal)',
-  },
-  {
-    id: 'att-003',
-    event_id: 'evt-gaec-2026-01',
-    guest_id: 'gst-005',
-    guest_name: 'David Peter Akpan',
-    guest_category: 'Media',
-    guest_organization: 'Channels Television Network',
-    qr_token: 'EVP-2N7U-8K5J-TT44',
-    gate_id: 'gate-03',
-    gate_name: 'Gate C — Media & Press Gate',
-    scanner_user_id: 'staff-03',
-    scanner_user_name: 'Kufre Ekpo',
-    scan_time: '2026-09-18T08:55:10Z',
-    status: 'valid',
-    device_info: 'iPhone 15 Pro (Gate C Scanner)',
-  },
-  {
-    id: 'att-004',
-    event_id: 'evt-gaec-2026-01',
-    guest_id: 'gst-007',
-    guest_name: 'Tunde Olawale Balogun',
-    guest_category: 'General Guest',
-    guest_organization: 'CloudScale Infrastructure',
-    qr_token: 'EVP-4K8V-9Q3W-XX12',
-    gate_id: 'gate-01',
-    gate_name: 'Gate A — Main Entrance',
-    scanner_user_id: 'staff-01',
-    scanner_user_name: 'Emmanuel Udoh',
-    scan_time: '2026-09-18T09:12:04Z',
-    status: 'valid',
-    device_info: 'Galaxy S24 (Gate A Terminal 1)',
-  },
-  {
-    id: 'att-005',
-    event_id: 'evt-gaec-2026-01',
-    guest_id: 'gst-002',
-    guest_name: 'Mary Asuquo James',
-    guest_category: 'Speaker',
-    guest_organization: 'DataSphere Global',
-    qr_token: 'EVP-3M9B-7L2P-99QW',
-    gate_id: 'gate-01',
-    gate_name: 'Gate A — Main Entrance',
-    scanner_user_id: 'staff-01',
-    scanner_user_name: 'Emmanuel Udoh',
-    scan_time: '2026-09-18T09:15:22Z',
-    status: 'duplicate',
-    notes: 'Already checked in at Gate B at 08:42 AM',
-    device_info: 'Galaxy S24 (Gate A Terminal 1)',
-  },
-];
-
-const INITIAL_AUDIT: AuditLog[] = [
-  {
-    id: 'aud-01',
-    user_name: 'Platform Administrator',
-    user_role: 'Super Admin',
-    event_id: 'evt-gaec-2026-01',
-    action: 'Event Initialized',
-    description: 'Created Akwa Ibom Tech & Leadership Summit 2026 at Godswill Akpabio Event Centre.',
-    timestamp: '2026-09-01T08:00:00Z',
-  },
-  {
-    id: 'aud-02',
-    user_name: 'Aniebiet Bassey',
-    user_role: 'Scanner Staff',
-    event_id: 'evt-gaec-2026-01',
-    action: 'Gate Check-in',
-    description: 'Authenticated VIP Guest Dr. John Umoh via QR token EVP-8F7A-92K4-XP21 at Gate B.',
-    timestamp: '2026-09-18T08:42:15Z',
-  },
-  {
-    id: 'aud-03',
-    user_name: 'Emmanuel Udoh',
-    user_role: 'Scanner Staff',
-    event_id: 'evt-gaec-2026-01',
-    action: 'Duplicate QR Detected',
-    description: 'Flagged duplicate scan for Mary Asuquo James at Gate A. Original entry occurred at Gate B.',
-    timestamp: '2026-09-18T09:15:22Z',
-  },
-];
+// Clean initial data - All demo data removed per user request
+const INITIAL_EVENTS: EventItem[] = [];
+const INITIAL_GATES: Gate[] = [];
+const INITIAL_STAFF: EventStaff[] = [];
+const INITIAL_GUESTS: Guest[] = [];
+const INITIAL_ATTENDANCE: AttendanceLog[] = [];
+const INITIAL_AUDIT: AuditLog[] = [];
 
 class StorageService {
   private isRealtimeSubscribed = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
+      if (!localStorage.getItem('eventpass_demo_wiped_v4')) {
+        this.resetAll();
+        localStorage.setItem('eventpass_demo_wiped_v4', 'true');
+      }
       setTimeout(() => this.initCloudSync(), 100);
     }
   }
@@ -561,7 +167,9 @@ class StorageService {
   getActiveEventId(): string {
     const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_EVENT_ID);
     if (saved) return saved;
-    return INITIAL_EVENTS[0].id;
+    const events = this.getEvents();
+    if (events && events.length > 0) return events[0].id;
+    return '';
   }
 
   setActiveEventId(eventId: string): void {
@@ -713,10 +321,64 @@ class StorageService {
     try { return JSON.parse(saved); } catch { return INITIAL_GUESTS; }
   }
 
+  findGuestByTokenOrRef(rawToken: string, allGuests: Guest[]): Guest | undefined {
+    if (!rawToken || !rawToken.trim()) return undefined;
+    let trimmed = rawToken.trim();
+
+    // Strip leading/trailing double or single quotes
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      trimmed = trimmed.slice(1, -1).trim();
+    }
+
+    // 1. Try parsing JSON if input looks like JSON
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        const possibleToken = parsed.qr_token || parsed.token || parsed.reference_number || parsed.ref || parsed.id || parsed.code;
+        if (typeof possibleToken === 'string' && possibleToken) {
+          const found = this.findGuestByTokenOrRef(possibleToken, allGuests);
+          if (found) return found;
+        }
+      } catch {
+        // ignore json parse error
+      }
+    }
+
+    // 2. Extract EVP-XXXX-XXXX-XXXX or REF-XXXXXX using regex
+    const evpMatch = trimmed.match(/EVP-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}/i);
+    if (evpMatch) {
+      const matchedToken = evpMatch[0].toUpperCase();
+      const guest = allGuests.find(g => g.qr_token && g.qr_token.toUpperCase() === matchedToken);
+      if (guest) return guest;
+    }
+
+    const refMatch = trimmed.match(/REF-\d{5,8}/i);
+    if (refMatch) {
+      const matchedRef = refMatch[0].toUpperCase();
+      const guest = allGuests.find(g => g.reference_number && g.reference_number.toUpperCase() === matchedRef);
+      if (guest) return guest;
+    }
+
+    const clean = trimmed.toUpperCase();
+    const cleanNoDash = clean.replace(/[^A-Z0-9]/g, '');
+
+    // 3. Direct match on qr_token, reference_number, or id
+    return allGuests.find(g => {
+      const qr = (g.qr_token || '').toUpperCase();
+      const ref = (g.reference_number || '').toUpperCase();
+      const id = (g.id || '').toUpperCase();
+
+      if (qr === clean || ref === clean || id === clean) return true;
+      if (qr && qr.replace(/[^A-Z0-9]/g, '') === cleanNoDash) return true;
+      if (qr && clean.includes(qr) && qr.length > 3) return true;
+      if (ref && clean.includes(ref) && ref.length > 3) return true;
+
+      return false;
+    });
+  }
+
   getGuestByToken(token: string): Guest | undefined {
-    return this.getAllGuests().find(
-      g => g.qr_token.trim().toUpperCase() === token.trim().toUpperCase()
-    );
+    return this.findGuestByTokenOrRef(token, this.getAllGuests());
   }
 
   saveGuest(guest: Guest): void {
@@ -838,12 +500,12 @@ class StorageService {
     };
     const nowIso = new Date().toISOString();
 
-    // 1. Search database for token
+    // 1. Search database for token across all guests using flexible matcher
     const allGuests = this.getAllGuests();
-    const guest = allGuests.find(g => g.qr_token.toUpperCase() === cleanToken);
+    const guest = this.findGuestByTokenOrRef(tokenInput, allGuests);
 
-    // Case 1: INVALID QR CODE (token does not exist or doesn't match active event)
-    if (!guest || guest.event_id !== activeEventId) {
+    // Case 1: INVALID QR CODE (token does not exist anywhere in database)
+    if (!guest) {
       const logEntry: AttendanceLog = {
         id: `att-${Date.now()}`,
         event_id: activeEventId,
@@ -854,7 +516,7 @@ class StorageService {
         scanner_user_name: scannerUserName,
         scan_time: nowIso,
         status: 'invalid',
-        notes: 'Token not found in active event database',
+        notes: 'Token not found in database',
         device_info: deviceInfo,
       };
       this.recordAttendanceLog(logEntry);
@@ -867,7 +529,44 @@ class StorageService {
       );
       return {
         status: 'invalid',
-        message: 'Invalid QR Code. This pass is not recognized for this event.',
+        message: 'Invalid QR Code. This pass/token is not recognized in the system database.',
+        gate_name: selectedGate.name,
+        scan_time: nowIso,
+      };
+    }
+
+    // Check Event Alignment
+    const events = this.getEvents();
+    const isMatchingEvent = 
+      guest.event_id === activeEventId || 
+      !activeEventId || 
+      activeEventId === 'empty-event' ||
+      events.length <= 1;
+
+    if (!isMatchingEvent) {
+      const passEvent = events.find(e => e.id === guest.event_id);
+      const passEventName = passEvent ? passEvent.name : 'another event';
+      const logEntry: AttendanceLog = {
+        id: `att-${Date.now()}`,
+        event_id: activeEventId,
+        guest_id: guest.id,
+        guest_name: guest.full_name,
+        guest_category: guest.category,
+        qr_token: guest.qr_token,
+        gate_id: selectedGate.id,
+        gate_name: selectedGate.name,
+        scanner_user_id: 'scanner-current',
+        scanner_user_name: scannerUserName,
+        scan_time: nowIso,
+        status: 'invalid',
+        notes: `Pass belongs to "${passEventName}" instead of active event`,
+        device_info: deviceInfo,
+      };
+      this.recordAttendanceLog(logEntry);
+      return {
+        status: 'invalid',
+        message: `Pass Recognized for "${guest.full_name}", but it belongs to "${passEventName}". Please select that event in top header.`,
+        guest: guest,
         gate_name: selectedGate.name,
         scan_time: nowIso,
       };

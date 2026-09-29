@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserRole } from '../types';
 import { Shield, Lock, Mail, User, CheckCircle2, ArrowRight, X, Building } from 'lucide-react';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { accountService, UserAccount } from '../services/accountService';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -9,56 +10,23 @@ interface LoginModalProps {
   onLoginSuccess: (user: { name: string; email: string; role: UserRole }) => void;
 }
 
-interface UserAccount {
-  name: string;
-  email: string;
-  pass: string;
-  role: UserRole;
-}
-
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const [email, setEmail] = useState('admin@godswillakpabioec.ng');
-  const [password, setPassword] = useState('password123');
-  const [fullName, setFullName] = useState('Chief Administrator');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<UserRole>('super_admin');
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(() => accountService.getUsers().length === 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const getLocalUsers = (): UserAccount[] => {
-    try {
-      const stored = localStorage.getItem('eventpass_custom_users');
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [
-      { name: 'Chief Administrator', email: 'admin@godswillakpabioec.ng', pass: 'password123', role: 'super_admin' },
-      { name: 'Akwa Ibom Event Director', email: 'organizer@eventpass.ng', pass: 'password123', role: 'organizer' },
-      { name: 'Emmanuel Udoh (Gate A)', email: 'emmanuel@gate.ng', pass: 'password123', role: 'scanner_staff' },
-      { name: 'Registered Attendee', email: 'guest@attendee.ng', pass: 'password123', role: 'guest' }
-    ];
+    return accountService.getUsers();
   };
 
   const saveLocalUser = (user: UserAccount) => {
-    try {
-      const users = getLocalUsers();
-      const existingIdx = users.findIndex(u => u.email.toLowerCase() === user.email.toLowerCase());
-      if (existingIdx >= 0) {
-        users[existingIdx] = user;
-      } else {
-        users.push(user);
-      }
-      localStorage.setItem('eventpass_custom_users', JSON.stringify(users));
-    } catch {}
-  };
-
-  const handleQuickDemoLogin = (demoRole: UserRole, demoName: string, demoEmail: string) => {
-    setRole(demoRole);
-    setFullName(demoName);
-    setEmail(demoEmail);
-    onLoginSuccess({ name: demoName, email: demoEmail, role: demoRole });
-    onClose();
+    accountService.saveAccount(user);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,8 +34,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     setLoading(true);
     setError(null);
 
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
+      setError('Please provide email and password.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      let resolvedName = fullName;
+      let resolvedName = fullName.trim();
       let resolvedRole = role;
 
       if (isSupabaseConfigured()) {
@@ -75,31 +50,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         if (supabase) {
           if (isRegistering) {
             const { error: signUpErr } = await supabase.auth.signUp({
-              email,
+              email: cleanEmail,
               password,
               options: {
-                data: { full_name: fullName, role }
+                data: { full_name: resolvedName, role }
               }
             });
             if (signUpErr) {
               console.warn('Supabase sign up notice:', signUpErr.message);
             }
-            saveLocalUser({ name: fullName, email, pass: password, role });
+            saveLocalUser({ name: resolvedName, email: cleanEmail, pass: password, role });
           } else {
             const { error: signInErr } = await supabase.auth.signInWithPassword({
-              email,
+              email: cleanEmail,
               password,
             });
             if (signInErr) {
               // fallback to local users check
               const users = getLocalUsers();
-              const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.pass === password);
+              const found = users.find(u => u.email.toLowerCase() === cleanEmail && u.pass === password);
               if (!found) {
-                if (isRegistering) {
-                  saveLocalUser({ name: fullName, email, pass: password, role });
-                } else {
-                  throw new Error(signInErr.message || 'Invalid email or password.');
-                }
+                throw new Error(signInErr.message || 'Invalid email or password.');
               } else {
                 resolvedName = found.name;
                 resolvedRole = found.role;
@@ -111,22 +82,34 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         // Local storage authentication mode
         const users = getLocalUsers();
         if (isRegistering) {
-          saveLocalUser({ name: fullName, email, pass: password, role });
-          resolvedName = fullName;
+          if (!resolvedName) {
+            setError('Please enter your full name.');
+            setLoading(false);
+            return;
+          }
+          const existing = users.find(u => u.email.toLowerCase() === cleanEmail);
+          if (existing) {
+            throw new Error('An account with this email already exists. Please sign in instead.');
+          }
+          saveLocalUser({ name: resolvedName, email: cleanEmail, pass: password, role });
           resolvedRole = role;
         } else {
-          const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.pass === password);
+          const found = users.find(u => u.email.toLowerCase() === cleanEmail && u.pass === password);
           if (!found) {
-            // Auto-create account if not found for convenience in prototype mode
-            const newUser = {
-              name: fullName || email.split('@')[0],
-              email,
-              pass: password,
-              role
-            };
-            saveLocalUser(newUser);
-            resolvedName = newUser.name;
-            resolvedRole = newUser.role;
+            if (users.length === 0) {
+              // If system has no accounts yet, allow initial admin creation
+              const newUser = {
+                name: resolvedName || cleanEmail.split('@')[0],
+                email: cleanEmail,
+                pass: password,
+                role: 'super_admin' as UserRole
+              };
+              saveLocalUser(newUser);
+              resolvedName = newUser.name;
+              resolvedRole = newUser.role;
+            } else {
+              throw new Error('Invalid email or password. Please check your credentials or create an account.');
+            }
           } else {
             resolvedName = found.name;
             resolvedRole = found.role;
@@ -135,8 +118,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       }
 
       onLoginSuccess({
-        name: resolvedName || email.split('@')[0],
-        email,
+        name: resolvedName || cleanEmail.split('@')[0],
+        email: cleanEmail,
         role: resolvedRole
       });
       onClose();
@@ -178,62 +161,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             </div>
           )}
 
-          {!isRegistering && (
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Quick Demo Login Profiles
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoLogin('super_admin', 'Godswill Admin', 'admin@godswillakpabioec.ng')}
-                  className="p-2.5 text-left border border-slate-200 hover:border-slate-900 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-xs group"
-                >
-                  <div className="font-bold text-slate-900 group-hover:text-emerald-700">Super Admin</div>
-                  <div className="text-[10px] text-slate-500 truncate">admin@godswill...</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoLogin('organizer', 'Akwa Ibom Event Director', 'organizer@eventpass.ng')}
-                  className="p-2.5 text-left border border-slate-200 hover:border-slate-900 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-xs group"
-                >
-                  <div className="font-bold text-slate-900 group-hover:text-emerald-700">Organizer</div>
-                  <div className="text-[10px] text-slate-500 truncate">organizer@...</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoLogin('scanner_staff', 'Emmanuel Udoh (Gate A)', 'emmanuel@gate.ng')}
-                  className="p-2.5 text-left border border-slate-200 hover:border-slate-900 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-xs group"
-                >
-                  <div className="font-bold text-slate-900 group-hover:text-emerald-700">Gate Scanner</div>
-                  <div className="text-[10px] text-slate-500 truncate">emmanuel@gate.ng</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoLogin('guest', 'Registered Attendee', 'guest@attendee.ng')}
-                  className="p-2.5 text-left border border-slate-200 hover:border-slate-900 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-xs group"
-                >
-                  <div className="font-bold text-slate-900 group-hover:text-emerald-700">Guest Pass</div>
-                  <div className="text-[10px] text-slate-500 truncate">guest@attendee.ng</div>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!isRegistering && (
-            <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink mx-4 text-slate-400 text-[11px] uppercase tracking-wider">or sign in with email</span>
-              <div className="flex-grow border-t border-slate-200"></div>
-            </div>
-          )}
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {(isRegistering || fullName) && (
+            {isRegistering && (
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
                 <div className="relative">
@@ -243,7 +173,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                     required={isRegistering}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Dr. Ini Akpabio"
+                    placeholder="Enter full name"
                     className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
                   />
                 </div>
@@ -259,7 +189,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@godswillakpabioec.ng"
+                  placeholder="your.email@example.com"
                   className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
                 />
               </div>
@@ -280,19 +210,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Role</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 font-medium"
-              >
-                <option value="super_admin">Super Administrator</option>
-                <option value="organizer">Event Organizer</option>
-                <option value="scanner_staff">Gate Scanner / Staff</option>
-                <option value="guest">Guest Attendee</option>
-              </select>
-            </div>
+            {isRegistering && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Role</label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 font-medium"
+                >
+                  <option value="super_admin">Super Administrator</option>
+                  <option value="organizer">Event Organizer</option>
+                  <option value="scanner_staff">Gate Scanner / Staff</option>
+                  <option value="guest">Guest Attendee</option>
+                </select>
+              </div>
+            )}
 
             <button
               type="submit"

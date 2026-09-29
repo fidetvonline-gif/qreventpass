@@ -17,11 +17,25 @@ import { isSupabaseConfigured } from './lib/supabase';
 import { UserRole, EventItem } from './types';
 import { ShieldCheck, Building, CheckCircle2, Database } from 'lucide-react';
 
+const DEMO_EMAILS = [
+  'admin@godswillakpabioec.ng',
+  'organizer@eventpass.ng',
+  'emmanuel@gate.ng',
+  'guest@attendee.ng'
+];
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role: UserRole } | null>(() => {
     try {
       const saved = localStorage.getItem('eventpass_current_user');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.email && DEMO_EMAILS.includes(parsed.email.toLowerCase().trim())) {
+          localStorage.removeItem('eventpass_current_user');
+          return null;
+        }
+        return parsed;
+      }
     } catch {}
     return null;
   });
@@ -30,7 +44,9 @@ export default function App() {
       const saved = localStorage.getItem('eventpass_current_user');
       if (saved) {
         const parsed = JSON.parse(saved);
-        return parsed.role || 'organizer';
+        if (parsed && parsed.email && !DEMO_EMAILS.includes(parsed.email.toLowerCase().trim())) {
+          return parsed.role || 'organizer';
+        }
       }
     } catch {}
     return 'organizer';
@@ -65,9 +81,25 @@ export default function App() {
     const handleUpdate = () => loadData();
     window.addEventListener('eventpass:data_updated', handleUpdate);
     return () => window.removeEventListener('eventpass:data_updated', handleUpdate);
-  }, []);
+  }, [currentUser]);
 
-  const activeEvent = events.find((e) => e.id === activeEventId) || events[0];
+  const activeEvent = events.find((e) => e.id === activeEventId) || events[0] || {
+    id: 'empty-event',
+    name: 'Godswill Akpabio Event Centre',
+    description: 'No events created yet. Please create your event in Events Management.',
+    venue: 'Godswill Akpabio Event Centre, Ukana, Akwa Ibom',
+    city: 'Uyo, Akwa Ibom State',
+    event_date: new Date().toISOString().split('T')[0],
+    start_time: '09:00 AM',
+    end_time: '05:00 PM',
+    organizer_name: 'Godswill Akpabio Event Centre',
+    contact_email: 'events@godswillakpabioec.ng',
+    contact_phone: '+234 803 123 4567',
+    max_guests: 1000,
+    status: 'draft',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 
   const handleSelectEvent = (id: string) => {
     setActiveEventId(id);
@@ -115,9 +147,6 @@ export default function App() {
         {!currentUser && (
           <div className="mb-6 p-4 sm:p-6 bg-slate-900 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
             <div className="space-y-1 text-center sm:text-left">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30">
-                <span>Godswill Akpabio Event Centre (Ukana, Akwa Ibom)</span>
-              </div>
               <h2 className="text-lg sm:text-xl font-bold">Welcome to EventPass Authentication</h2>
               <p className="text-xs text-slate-300">Please sign in to your account or create a new account to access the system.</p>
             </div>
@@ -206,7 +235,7 @@ export default function App() {
             <Building className="w-4 h-4 text-slate-400" />
             <span className="font-semibold text-slate-700">EventPass System</span>
             <span>—</span>
-            <span>Case Study: Godswill Akpabio Event Centre, Uyo, Akwa Ibom State</span>
+            <span>Digital QR Check-In & Gate Verification Platform</span>
           </div>
 
           <div className="flex items-center gap-3 text-[11px]">

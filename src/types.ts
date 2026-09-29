@@ -92,9 +92,11 @@ export interface EventStaff {
   email: string;
   phone: string;
   role: 'Organizer' | 'Scanner Staff' | 'Security' | 'Event Manager';
+  system_role?: UserRole;
   gate_id: string;
   gate_name: string;
   is_active: boolean;
+  has_account?: boolean;
   created_at: string;
 }
 

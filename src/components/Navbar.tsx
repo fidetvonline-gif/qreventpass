@@ -8,7 +8,6 @@ import {
   FileText, 
   History, 
   Calendar, 
-  RotateCcw, 
   Building,
   UserCheck,
   ChevronDown,
@@ -18,7 +17,6 @@ import {
   LogOut
 } from 'lucide-react';
 import { UserRole, EventItem } from '../types';
-import { storage } from '../services/storage';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 interface NavbarProps {
@@ -49,12 +47,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
 }) => {
   const isCloudConnected = isSupabaseConfigured();
-  const handleResetData = () => {
-    if (confirm('Reset system data to original Godswill Akpabio Event Centre demo state? All scans and guests will be refreshed.')) {
-      storage.resetAll();
-      window.location.reload();
-    }
-  };
 
   // Define nav links based on role
   const getNavLinks = () => {
@@ -89,14 +81,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-      {/* Top microbar with Case study badge & Role switcher */}
+      {/* Top microbar & Role switcher */}
       <div className="bg-slate-900 text-slate-300 text-xs px-4 py-1.5 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
           <span className="font-semibold text-white tracking-wide">EventPass</span>
           <span className="text-slate-500">•</span>
           <span className="text-slate-400 text-[11px] truncate">
-            Godswill Akpabio Event Centre (Ukana, Akwa Ibom)
+            Digital QR Check-In & Gate Authentication
           </span>
         </div>
 
@@ -109,11 +101,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               onChange={(e) => onSelectEvent(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-200 rounded-md px-2 py-0.5 text-[11px] font-medium focus:outline-hidden focus:ring-1 focus:ring-slate-400"
             >
-              {events.map((evt) => (
-                <option key={evt.id} value={evt.id}>
-                  {evt.name.length > 28 ? `${evt.name.substring(0, 28)}...` : evt.name}
-                </option>
-              ))}
+              {events.length === 0 ? (
+                <option value="">No Events — Create One</option>
+              ) : (
+                events.map((evt) => (
+                  <option key={evt.id} value={evt.id}>
+                    {evt.name.length > 28 ? `${evt.name.substring(0, 28)}...` : evt.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -179,15 +175,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 isCloudConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
               }`}
             ></span>
-          </button>
-
-          <button
-            onClick={handleResetData}
-            className="text-[11px] text-slate-400 hover:text-slate-200 flex items-center gap-1 transition-colors"
-            title="Reset system to original sample data"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span className="hidden md:inline">Reset Demo</span>
           </button>
         </div>
       </div>
