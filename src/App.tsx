@@ -164,6 +164,7 @@ export default function App() {
             events={events}
             activeEvent={activeEvent}
             onNavigate={setCurrentView}
+            onSelectEvent={handleSelectEvent}
           />
         )}
 

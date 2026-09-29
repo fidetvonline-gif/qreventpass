@@ -34,11 +34,92 @@ class StorageService {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      if (!localStorage.getItem('eventpass_demo_wiped_v4')) {
-        this.resetAll();
-        localStorage.setItem('eventpass_demo_wiped_v4', 'true');
-      }
+      this.ensureDefaultData();
       setTimeout(() => this.initCloudSync(), 100);
+    }
+  }
+
+  private ensureDefaultData(): void {
+    const events = this.getEvents();
+    if (events.length === 0) {
+      const defaultEvent: EventItem = {
+        id: 'evt-default-1',
+        name: 'Godswill Akpabio Event Centre Grand Launch',
+        description: 'Official opening ceremony and celebration at Godswill Akpabio Event Centre ukana aks.',
+        venue: 'Godswill Akpabio Event Centre ukana aks',
+        city: 'Ukana',
+        event_date: '2026-10-15',
+        start_time: '10:00 AM',
+        end_time: '04:00 PM',
+        organizer_name: 'Akwa Ibom State Government',
+        contact_email: 'events@godswillakpabiocentre.gov.ng',
+        contact_phone: '+234 800 000 0000',
+        max_guests: 5000,
+        status: 'published',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify([defaultEvent]));
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_EVENT_ID, defaultEvent.id);
+
+      const defaultGates: Gate[] = [
+        { id: 'gate-1', event_id: defaultEvent.id, name: 'Gate A - Main Entrance', location: 'North Wing', assigned_categories: ['VIP', 'General Guest', 'Government Official', 'Speaker', 'Media', 'Staff', 'Partner', 'Student'], is_active: true, created_at: new Date().toISOString() },
+        { id: 'gate-2', event_id: defaultEvent.id, name: 'Gate B - VIP Lounge', location: 'East Wing', assigned_categories: ['VIP', 'Government Official'], is_active: true, created_at: new Date().toISOString() },
+        { id: 'gate-3', event_id: defaultEvent.id, name: 'Gate C - Media & Speakers', location: 'West Wing', assigned_categories: ['Speaker', 'Media'], is_active: true, created_at: new Date().toISOString() }
+      ];
+      localStorage.setItem(STORAGE_KEYS.GATES, JSON.stringify(defaultGates));
+
+      const defaultGuests: Guest[] = [
+        {
+          id: 'guest-1',
+          event_id: defaultEvent.id,
+          full_name: 'Hon. Justice Okon',
+          email: 'okon@judiciary.gov.ng',
+          phone: '+234 803 111 2223',
+          organization: 'State Judiciary',
+          category: 'Government Official',
+          reference_number: 'REF-2026-001',
+          qr_token: 'GP-VIP-9921',
+          is_active: true,
+          check_in_status: 'pending',
+          check_in_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'guest-2',
+          event_id: defaultEvent.id,
+          full_name: 'Dr. Ekaette Umo',
+          email: 'ekaette@akwaibom.edu.ng',
+          phone: '+234 802 333 4455',
+          organization: 'AKSU',
+          category: 'Speaker',
+          reference_number: 'REF-2026-002',
+          qr_token: 'GP-SPK-4412',
+          is_active: true,
+          check_in_status: 'pending',
+          check_in_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'guest-3',
+          event_id: defaultEvent.id,
+          full_name: 'Blessing Udoh',
+          email: 'blessing@istend.com',
+          phone: '+234 805 777 8899',
+          organization: 'Invited Guest',
+          category: 'General Guest',
+          reference_number: 'REF-2026-003',
+          qr_token: 'GP-GEN-7783',
+          is_active: true,
+          check_in_status: 'pending',
+          check_in_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(defaultGuests));
     }
   }
 
@@ -274,11 +355,23 @@ class StorageService {
   }
 
   findGuestByTokenOrRef(tokenInput: string, allGuests: Guest[]): Guest | undefined {
-    const clean = tokenInput.trim().toUpperCase();
+    if (!tokenInput) return undefined;
+    let clean = tokenInput.trim();
+    if (clean.includes('=')) {
+      try {
+        const urlObj = new URL(clean.includes('://') ? clean : `http://${clean}`);
+        const tokenParam = urlObj.searchParams.get('token') || urlObj.searchParams.get('ref') || urlObj.searchParams.get('q');
+        if (tokenParam) clean = tokenParam;
+      } catch {}
+    }
+    const upperClean = clean.toUpperCase();
     return allGuests.find(g => 
-      (g.qr_token && g.qr_token.toUpperCase() === clean) || 
-      (g.reference_number && g.reference_number.toUpperCase() === clean) ||
-      g.id === tokenInput
+      (g.qr_token && g.qr_token.toUpperCase() === upperClean) || 
+      (g.reference_number && g.reference_number.toUpperCase() === upperClean) ||
+      g.id === tokenInput ||
+      (g.qr_token && g.qr_token.toUpperCase().includes(upperClean)) ||
+      (g.reference_number && g.reference_number.toUpperCase().includes(upperClean)) ||
+      (g.email && g.email.toUpperCase() === upperClean)
     );
   }
 
@@ -424,6 +517,10 @@ class StorageService {
 
     const allGuests = this.getAllGuests();
     const guest = this.findGuestByTokenOrRef(tokenInput, allGuests);
+
+    if (guest && guest.event_id && guest.event_id !== activeEventId) {
+      this.setActiveEventId(guest.event_id);
+    }
 
     if (!guest) {
       const logEntry: AttendanceLog = {
