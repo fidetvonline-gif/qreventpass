@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building, 
   CheckCircle2, 
@@ -12,26 +12,37 @@ import {
   Search,
   User,
   Mail,
-  Phone
+  Phone,
+  UserCheck,
+  LogIn
 } from 'lucide-react';
 import { storage } from '../services/storage';
 import { generateToken, generateReferenceNumber } from '../services/qr';
-import { EventItem, Guest, GuestCategory } from '../types';
+import { EventItem, Guest, GuestCategory, UserRole } from '../types';
 import { DigitalPassModal } from './DigitalPassModal';
 
 interface PublicRegistrationProps {
   event: EventItem | undefined;
+  currentUser?: { name: string; email: string; role: UserRole } | null;
+  onOpenLoginModal?: () => void;
 }
 
-export const PublicRegistration: React.FC<PublicRegistrationProps> = ({ event }) => {
+export const PublicRegistration: React.FC<PublicRegistrationProps> = ({ event, currentUser, onOpenLoginModal }) => {
   const [activeTab, setActiveTab] = useState<'register' | 'lookup'>('register');
   
   // Registration Form State
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState(currentUser?.name || '');
+  const [email, setEmail] = useState(currentUser?.email || '');
   const [phone, setPhone] = useState('');
   const [organization, setOrganization] = useState('');
   const [category, setCategory] = useState<GuestCategory>('General Guest');
+
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.name && !fullName) setFullName(currentUser.name);
+      if (currentUser.email && !email) setEmail(currentUser.email);
+    }
+  }, [currentUser]);
   
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [generatedGuest, setGeneratedGuest] = useState<Guest | null>(null);
@@ -184,122 +195,153 @@ export const PublicRegistration: React.FC<PublicRegistrationProps> = ({ event })
       {/* Tab 1: Registration Form */}
       {activeTab === 'register' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-          <div className="mb-5 pb-3 border-b border-slate-100">
-            <h2 className="text-base font-bold text-slate-900">
-              Official Attendee Registration
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Fill in your details to immediately generate your encrypted QR admission pass.
-            </p>
+          <div className="mb-5 pb-3 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">
+                Official Attendee Registration
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Generate your encrypted QR admission pass for Godswill Akpabio Event Centre.
+              </p>
+            </div>
+            {currentUser && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Account Verified
+              </span>
+            )}
           </div>
 
-          {errorMsg && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Full Name *
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Dr. Kufre Ekanem"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                />
+          {!currentUser ? (
+            <div className="py-8 px-4 text-center space-y-4 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center justify-center mx-auto shadow-inner">
+                <UserCheck className="w-6 h-6" />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email Address *
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="kufre@organization.ng"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="tel"
-                    placeholder="+234 803 000 0000"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Organization / Institution
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. University of Uyo / Tech Firm"
-                  value={organization}
-                  onChange={(e) => setOrganization(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Guest Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as GuestCategory)}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                >
-                  <option value="General Guest">General Guest</option>
-                  <option value="VIP">VIP</option>
-                  <option value="Speaker">Speaker</option>
-                  <option value="Government Official">Government Official</option>
-                  <option value="Partner">Partner</option>
-                  <option value="Media">Media</option>
-                  <option value="Student">Student</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                <Shield className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Instant QR credential issued upon submission</span>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-slate-900">Account Required for Registration</h3>
+                <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                  To register as an official attendee for <strong>{event.name}</strong>, you must create an account or sign in first.
+                </p>
               </div>
               <button
-                type="submit"
-                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+                type="button"
+                onClick={onOpenLoginModal}
+                className="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
               >
-                Register & Get Pass
+                <LogIn className="w-4 h-4 text-emerald-200" />
+                <span>Create Account / Sign In to Register</span>
               </button>
             </div>
-          </form>
+          ) : (
+            <>
+              {errorMsg && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Full Name *
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Dr. Kufre Ekanem"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Email Address *
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="kufre@organization.ng"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Phone Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="tel"
+                        placeholder="+234 803 000 0000"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Organization / Institution
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. University of Uyo / Tech Firm"
+                      value={organization}
+                      onChange={(e) => setOrganization(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Guest Category
+                    </label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value as GuestCategory)}
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 font-medium cursor-pointer"
+                    >
+                      <option value="General Guest">General Guest</option>
+                      <option value="VIP">VIP</option>
+                      <option value="Speaker">Speaker</option>
+                      <option value="Government Official">Government Official</option>
+                      <option value="Partner">Partner</option>
+                      <option value="Media">Media</option>
+                      <option value="Student">Student</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Instant QR credential issued upon submission</span>
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  >
+                    Confirm Registration & Get Pass
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
         </div>
       )}
 

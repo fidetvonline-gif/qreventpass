@@ -12,6 +12,8 @@ import { EventsManagement } from './components/EventsManagement';
 import { PublicRegistration } from './components/PublicRegistration';
 import { SupabaseModal } from './components/SupabaseModal';
 import { LoginModal } from './components/LoginModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { AccessDenied } from './components/AccessDenied';
 import { storage } from './services/storage';
 import { isSupabaseConfigured } from './lib/supabase';
 import { UserRole, EventItem } from './types';
@@ -45,11 +47,11 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.email && !DEMO_EMAILS.includes(parsed.email.toLowerCase().trim())) {
-          return parsed.role || 'organizer';
+          return parsed.role || 'guest';
         }
       }
     } catch {}
-    return 'organizer';
+    return 'guest';
   });
   const [currentView, setCurrentView] = useState<string>(() => {
     try {
@@ -58,6 +60,28 @@ export default function App() {
     } catch {}
     return 'landing';
   });
+
+  const effectiveRole: UserRole = currentUser ? (currentUser.role === 'super_admin' ? currentRole : currentUser.role) : 'guest';
+
+  const hasPermission = (view: string): boolean => {
+    if (view === 'landing' || view === 'public_register') return true;
+    if (view === 'scanner' || view === 'reports') {
+      return effectiveRole === 'scanner_staff' || effectiveRole === 'organizer' || effectiveRole === 'super_admin';
+    }
+    if (view === 'dashboard' || view === 'guests' || view === 'gates' || view === 'staff' || view === 'events') {
+      return effectiveRole === 'organizer' || effectiveRole === 'super_admin';
+    }
+    if (view === 'audit') {
+      return effectiveRole === 'super_admin';
+    }
+    return false;
+  };
+
+  const getRequiredRoleName = (view: string): string => {
+    if (view === 'audit') return 'Super Administrator';
+    if (view === 'scanner' || view === 'reports') return 'Gate Officer, Organizer, or Administrator';
+    return 'Event Organizer or Super Administrator';
+  };
   const [events, setEvents] = useState<EventItem[]>([]);
   const [activeEventId, setActiveEventId] = useState<string>('');
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
@@ -131,7 +155,7 @@ export default function App() {
       <Navbar
         currentView={currentView}
         onNavigate={setCurrentView}
-        currentRole={currentRole}
+        currentRole={effectiveRole}
         onChangeRole={setCurrentRole}
         events={events}
         activeEvent={activeEvent}
@@ -159,60 +183,76 @@ export default function App() {
           </div>
         )}
 
-        {currentView === 'landing' && (
-          <LandingPage
-            events={events}
-            activeEvent={activeEvent}
-            onNavigate={setCurrentView}
-            onSelectEvent={handleSelectEvent}
+        {!hasPermission(currentView) ? (
+          <AccessDenied
+            requiredRole={getRequiredRoleName(currentView)}
+            currentRole={effectiveRole}
+            currentUser={currentUser}
+            onOpenLoginModal={() => setIsLoginModalOpen(true)}
+            onGoHome={() => setCurrentView('landing')}
           />
-        )}
+        ) : (
+          <>
+            {currentView === 'landing' && (
+              <LandingPage
+                events={events}
+                activeEvent={activeEvent}
+                onNavigate={setCurrentView}
+                onSelectEvent={handleSelectEvent}
+              />
+            )}
 
-        {currentView === 'dashboard' && (
-          <Dashboard
-            event={activeEvent}
-            onNavigateToScanner={() => setCurrentView('scanner')}
-            onNavigateToGuests={() => setCurrentView('guests')}
-            onNavigateToReports={() => setCurrentView('reports')}
-          />
-        )}
+            {currentView === 'dashboard' && (
+              <Dashboard
+                event={activeEvent}
+                onNavigateToScanner={() => setCurrentView('scanner')}
+                onNavigateToGuests={() => setCurrentView('guests')}
+                onNavigateToReports={() => setCurrentView('reports')}
+              />
+            )}
 
-        {currentView === 'scanner' && (
-          <Scanner
-            event={activeEvent}
-            staffName={currentRole === 'scanner_staff' ? 'Gate Officer' : 'Security Supervisor'}
-          />
-        )}
+            {currentView === 'scanner' && (
+              <Scanner
+                event={activeEvent}
+                staffName={effectiveRole === 'scanner_staff' ? 'Gate Officer' : 'Security Supervisor'}
+              />
+            )}
 
-        {currentView === 'guests' && (
-          <GuestsList event={activeEvent} />
-        )}
+            {currentView === 'guests' && (
+              <GuestsList event={activeEvent} />
+            )}
 
-        {currentView === 'gates' && (
-          <GatesManagement event={activeEvent} />
-        )}
+            {currentView === 'gates' && (
+              <GatesManagement event={activeEvent} />
+            )}
 
-        {currentView === 'staff' && (
-          <StaffManagement event={activeEvent} />
-        )}
+            {currentView === 'staff' && (
+              <StaffManagement event={activeEvent} />
+            )}
 
-        {currentView === 'reports' && (
-          <ReportsView event={activeEvent} />
-        )}
+            {currentView === 'reports' && (
+              <ReportsView event={activeEvent} />
+            )}
 
-        {currentView === 'audit' && (
-          <AuditLogsView event={activeEvent} />
-        )}
+            {currentView === 'audit' && (
+              <AuditLogsView event={activeEvent} />
+            )}
 
-        {currentView === 'events' && (
-          <EventsManagement
-            onSelectEvent={handleSelectEvent}
-            activeEventId={activeEventId}
-          />
-        )}
+            {currentView === 'events' && (
+              <EventsManagement
+                onSelectEvent={handleSelectEvent}
+                activeEventId={activeEventId}
+              />
+            )}
 
-        {currentView === 'public_register' && (
-          <PublicRegistration event={activeEvent} />
+            {currentView === 'public_register' && (
+              <PublicRegistration
+                event={activeEvent}
+                currentUser={currentUser}
+                onOpenLoginModal={() => setIsLoginModalOpen(true)}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -255,6 +295,9 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Offline Mode Banner */}
+      <OfflineIndicator />
     </div>
   );
 }

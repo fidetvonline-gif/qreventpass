@@ -16,6 +16,7 @@ import {
   LogIn,
   LogOut
 } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 import { UserRole, EventItem } from '../types';
 import { isSupabaseConfigured } from '../lib/supabase';
 
@@ -113,25 +114,34 @@ export const Navbar: React.FC<NavbarProps> = ({
             </select>
           </div>
 
-          {/* Role Switcher */}
+          {/* Role Badge / Security Context */}
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400 text-[11px] hidden sm:inline">Perspective:</span>
-            <select
-              value={currentRole}
-              onChange={(e) => {
-                const newRole = e.target.value as UserRole;
-                onChangeRole(newRole);
-                if (newRole === 'scanner_staff') onNavigate('scanner');
-                else if (newRole === 'guest') onNavigate('public_register');
-                else onNavigate('dashboard');
-              }}
-              className="bg-slate-800 border border-slate-700 text-emerald-400 rounded-md px-2 py-0.5 text-[11px] font-bold focus:outline-hidden focus:ring-1 focus:ring-emerald-400"
-            >
-              <option value="super_admin">Super Administrator</option>
-              <option value="organizer">Event Organizer</option>
-              <option value="scanner_staff">Entrance Gate Staff</option>
-              <option value="guest">Guest Attendee</option>
-            </select>
+            <span className="text-slate-400 text-[11px] hidden sm:inline">Role:</span>
+            {currentUser?.role === 'super_admin' ? (
+              <select
+                value={currentRole}
+                onChange={(e) => {
+                  const newRole = e.target.value as UserRole;
+                  onChangeRole(newRole);
+                  if (newRole === 'scanner_staff') onNavigate('scanner');
+                  else if (newRole === 'guest') onNavigate('public_register');
+                  else onNavigate('dashboard');
+                }}
+                className="bg-slate-800 border border-slate-700 text-emerald-400 rounded-md px-2 py-0.5 text-[11px] font-bold focus:outline-hidden focus:ring-1 focus:ring-emerald-400 cursor-pointer"
+                title="Super Admin Perspective Switcher"
+              >
+                <option value="super_admin">Super Administrator</option>
+                <option value="organizer">Event Organizer</option>
+                <option value="scanner_staff">Entrance Gate Staff</option>
+                <option value="guest">Guest Attendee</option>
+              </select>
+            ) : (
+              <span className="bg-slate-800 border border-slate-700 text-emerald-400 rounded-md px-2 py-0.5 text-[11px] font-bold capitalize">
+                {currentRole === 'super_admin' ? 'Super Administrator' :
+                 currentRole === 'organizer' ? 'Event Organizer' :
+                 currentRole === 'scanner_staff' ? 'Gate Officer' : 'Guest Attendee'}
+              </span>
+            )}
           </div>
 
           {/* User Auth Info / Login button */}
@@ -222,6 +232,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Quick CTA */}
           <div className="flex items-center gap-2">
+            <PWAInstallButton />
+
             {currentRole !== 'scanner_staff' && (
               <button
                 onClick={() => onNavigate('scanner')}

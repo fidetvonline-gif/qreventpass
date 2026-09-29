@@ -14,7 +14,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<UserRole>('super_admin');
   const [isRegistering, setIsRegistering] = useState(() => accountService.getUsers().length === 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +34,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
 
     try {
       let resolvedName = fullName.trim();
-      let resolvedRole = role;
+      let resolvedRole: UserRole = 'guest';
 
       const result = isRegistering 
         ? await accountService.signUp(cleanEmail, password, resolvedName, resolvedRole)
@@ -139,22 +138,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 />
               </div>
             </div>
-
-            {isRegistering && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Role</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as UserRole)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 font-medium"
-                >
-                  <option value="super_admin">Super Administrator</option>
-                  <option value="organizer">Event Organizer</option>
-                  <option value="scanner_staff">Gate Scanner / Staff</option>
-                  <option value="guest">Guest Attendee</option>
-                </select>
-              </div>
-            )}
 
             <button
               type="submit"
